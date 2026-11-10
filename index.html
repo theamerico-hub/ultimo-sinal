@@ -352,6 +352,9 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .dl .di{text-align:center}.dl .dt{color:var(--dim);font-size:12px}.dl.k-nota .dx{color:#fff}.dl.k-morte .dx{color:#ff8a80}.dl.k-queda .dx{color:var(--warn)}.dl.k-pista .dx{color:#8fb3e8}.dl.k-efeito .dx{color:#d79bff}
 .dl .clr{background:none;border:0;color:var(--dim)}
 .bkl .r{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.rsopt{display:flex;flex-direction:column;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+.danger{border-color:rgba(214,69,65,.45)}
+#rsOk:not(:disabled){background:var(--bad);border-color:var(--bad);color:#fff}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 </style>
@@ -399,12 +402,25 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
     <textarea id="bkText"></textarea>
     <div class="btnrow" style="margin-top:10px;justify-content:space-between">
       <div class="btnrow"><button class="b" id="bkCopy">Copiar</button><button class="b" id="bkRestore">Restaurar</button></div>
-      <div class="btnrow"><button class="b dmg" id="bkReset">Resetar fichas</button><button class="b" id="bkClear">Limpar rolagens</button><button class="b" id="bkClose">Fechar</button></div>
+      <div class="btnrow"><button class="b dmg" id="bkReset">Resetar mesa…</button><button class="b" id="bkClear">Limpar rolagens</button><button class="b" id="bkClose">Fechar</button></div>
     </div>
     <p class="small" id="bkMsg" style="margin-bottom:0"></p>
   </div>
 </div>
 <div id="fx" aria-live="polite"><div class="die"><svg viewBox="0 0 100 100" id="fxSvg"></svg><div class="face" id="fxFace"></div></div><div class="who" id="fxWho"></div><div class="lbl" id="fxLbl"></div><div class="tot" id="fxTot"></div><div class="oc" id="fxOc"></div><div class="skip">toque para fechar</div></div>
+<div class="modal" id="rsModal"><div class="box wide">
+  <h2 style="font-size:30px;color:#ff8a80">Resetar mesa</h2>
+  <p class="small" style="margin:4px 0 12px">Volta a mesa para o início da campanha. Antes de apagar, um backup automático é salvo e pode ser restaurado em <b>Backup</b>.</p>
+  <div class="rsopt"><label class="toggle"><input type="checkbox" checked disabled> Fichas, PV, Medo, Infecção, munição, suprimentos, iniciativa, pedidos, Ruído, sessão e inimigos em cena</label>
+  <label class="toggle"><input type="checkbox" id="rsLog" checked> Histórico de rolagens</label>
+  <label class="toggle"><input type="checkbox" id="rsDiario" checked> Diário</label>
+  <label class="toggle"><input type="checkbox" id="rsPistas"> Pistas (rascunhos e reveladas)</label>
+  <label class="toggle"><input type="checkbox" id="rsNotas"> Anotações do mestre nas fichas e nos NPCs</label></div>
+  <p class="small" style="margin:12px 0 4px">Sempre mantidos: segredos dos personagens, lista e descrição dos NPCs (com PV restaurados) e sua senha.</p>
+  <label class="small" style="display:block;margin-top:12px">Para confirmar, digite <b style="color:#fff">RESETAR</b>:</label>
+  <input type="text" id="rsIn" autocomplete="off" style="width:100%;padding:8px 10px;margin-top:4px;font-size:16px;letter-spacing:.1em">
+  <div class="btnrow" style="justify-content:space-between;margin-top:14px"><button class="b" id="rsCancel">Cancelar</button><button class="b dmg" id="rsOk" disabled>Resetar mesa</button></div>
+  <p class="small" id="rsMsg" style="margin-bottom:0"></p></div></div>
 <div id="notes"></div>
 <div id="horror"></div>
 <div class="modal" id="pistaModal"><div class="box wide pbox"><div class="t" style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#ff8a80">Nova pista</div><h2 id="pmT" style="font-size:32px;margin:4px 0 10px"></h2><img id="pmI" class="hidden" alt=""><div id="pmX" style="white-space:pre-wrap;color:#d3d0ca;font-family:'Special Elite',monospace;font-size:15px;margin-top:8px"></div><div class="btnrow" style="justify-content:flex-end;margin-top:14px"><button class="b pri" onclick="document.getElementById('pistaModal').classList.remove('on')">Fechar</button></div></div></div>
@@ -582,7 +598,7 @@ function initFirebase(){
   q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id);notifyRoll(r)}ingestOne(r);renderFeeds()});
   fdb.ref("publico/pistas").on("value",s=>onPistas(s.val()||{}));
   fdb.ref("publico/fx").on("value",s=>onFx(s.val()));
-  q.on("child_removed",s=>{const v=s.val()||{};LOG=LOG.filter(x=>x.id!==v.id);renderFeeds()});
+  q.on("child_removed",s=>{const v=s.val()||{};LOG=LOG.filter(x=>x._k!==s.key&&x.id!==v.id);myRolls=myRolls.filter(x=>x.id!==v.id);renderFeeds()});
   fauth.onAuthStateChanged(u=>{
     const isM=!!(u&&u.email&&MASTER_EMAIL&&u.email.toLowerCase()===MASTER_EMAIL.toLowerCase());
     if(isM){
@@ -953,6 +969,7 @@ function renderMesa(){
     ${supMasterHTML()}
     <div class="card"><h3>Descanso</h3><div class="btnrow"><button class="b" data-act="rest" data-k="curto">Descanso curto · +1D4 PV</button><button class="b" data-act="rest" data-k="noite">Noite segura · +1D6+Vontade, zera Medo</button></div>
       <div class="small" style="margin-top:6px">Vale para todo o grupo. Incapacitados estáveis acordam com 1 PV na noite segura. Clique duas vezes para confirmar.</div></div>
+    <div class="card danger"><h3>Zona de perigo</h3><p class="small" style="margin-top:0">Apaga os testes e o progresso e volta a mesa para o início da campanha. Pede confirmação e salva um backup antes.</p><button class="b dmg" data-act="resetOpen">Resetar mesa…</button></div>
     <div class="card"><h3>Link para os jogadores</h3>
       <p class="small" style="margin-top:0">Mande o endereço desta página. Cada jogador abre, escolhe o personagem e já pode rolar, sem precisar de conta. Tudo fica salvo e sincronizado.</p></div>
   </div></div>`;
@@ -1290,6 +1307,7 @@ document.addEventListener("click",e=>{
   }
   if(!(role==="mestre"&&unlocked))return;
   if(a==="undo"){doUndo();return}
+  if(a==="resetOpen"){openReset();return}
   if(["diarySess","diaryCopy","diaryAdd","diaryDel","pistaSave","pistaReveal","pistaHide","pistaDel","fxSend"].includes(a)){qolMaster(a,t,e);return}
   if((a==="rest")&&t.dataset.arm!=="1"){t.dataset.arm="1";const old=t.textContent;t.textContent="Clique de novo para confirmar";setTimeout(()=>{t.dataset.arm="";t.textContent=old},2500);return}
   const __b=snap();setTimeout(()=>pushUndo(__b),0);
@@ -1361,7 +1379,8 @@ $("#bkClose").onclick=()=>$("#bkModal").classList.remove("on");
 $("#bkCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("#bkText").value);$("#bkMsg").textContent="Copiado."}catch(e){$("#bkText").select();$("#bkMsg").textContent="Selecione o texto e copie com Ctrl+C."}};
 $("#bkRestore").onclick=()=>{try{const o=JSON.parse($("#bkText").value);if(o.pub)PUB=mergePub(o.pub);if(o.priv){const pin=PRIV.pinHash;PRIV=mergePriv(o.priv);PRIV.pinHash=pin}savePub();savePriv();renderAll();$("#bkMsg").textContent="Backup restaurado."}catch(e){$("#bkMsg").textContent="Texto inválido."}};
 let arm=false;
-$("#bkReset").onclick=()=>{if(!arm){arm=true;$("#bkReset").textContent="Clique de novo p/ confirmar";setTimeout(()=>{arm=false;$("#bkReset").textContent="Resetar fichas"},3000);return}
+$("#bkReset").onclick=()=>{$("#bkModal").classList.remove("on");openReset()};
+const __oldReset=()=>{if(!arm){arm=true;$("#bkReset").textContent="Clique de novo p/ confirmar";setTimeout(()=>{arm=false;$("#bkReset").textContent="Resetar fichas"},3000);return}
   const pin=PRIV.pinHash,tab=PRIV.tab;PUB=pubDefaults();PRIV=privDefaults();PRIV.pinHash=pin;PRIV.tab=tab;savePub();savePriv();renderAll();arm=false;$("#bkReset").textContent="Resetar fichas";$("#bkMsg").textContent="Fichas voltaram ao início."};
 $("#bkClear").onclick=()=>{LOG=[];PRIV.secret=[];myRolls=[];if(fdb)fdb.ref("rolagens").remove().catch(()=>{});saveLog();savePriv();renderFeeds();$("#bkMsg").textContent="Histórico de rolagens limpo."};
 async function qolMaster(a,t,e){
@@ -1585,6 +1604,37 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-bk]");if(!
 
 /* ---------- QoL: PWA ---------- */
 if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+
+/* ---------- reset ---------- */
+function openReset(){$("#rsIn").value="";$("#rsOk").disabled=true;$("#rsMsg").textContent="";$("#rsModal").classList.add("on");setTimeout(()=>$("#rsIn").focus(),50)}
+$("#rsCancel").onclick=()=>$("#rsModal").classList.remove("on");
+$("#rsIn").addEventListener("input",e=>{$("#rsOk").disabled=e.target.value.trim().toUpperCase()!=="RESETAR"});
+$("#rsIn").addEventListener("keydown",e=>{if(e.key==="Enter"&&!$("#rsOk").disabled)doReset()});
+$("#rsOk").onclick=()=>doReset();
+async function doReset(){
+  if(!(role==="mestre"&&unlocked))return;
+  if($("#rsIn").value.trim().toUpperCase()!=="RESETAR")return;
+  $("#rsOk").disabled=true;$("#rsMsg").textContent="Salvando backup…";
+  try{if(!LOCAL()&&fdb){const k="b"+Date.now();await fdb.ref("mestre/backups/"+k).set({at:Date.now(),sessao:PUB.sessao,antesDoReset:true,pub:JSON.stringify(PUB),priv:JSON.stringify(Object.assign({},PRIV,{done:undefined}))})}}
+  catch(e){$("#rsMsg").textContent="Não consegui salvar o backup, nada foi apagado ("+(e&&e.code||"erro")+").";$("#rsOk").disabled=false;return}
+  const keepLog=!$("#rsLog").checked?true:false, wipeDiario=$("#rsDiario").checked, wipePistas=$("#rsPistas").checked, wipeNotas=$("#rsNotas").checked;
+  const before=snap();
+  PUB=pubDefaults();
+  const old=PRIV;const np=privDefaults();
+  np.pinHash=old.pinHash;np.tab="mesa";
+  PCS.forEach(p=>{np.pcs[p.id]={seg:old.pcs[p.id]?old.pcs[p.id].seg:"",traumas:"",notas:wipeNotas?"":(old.pcs[p.id]&&old.pcs[p.id].notas)||""}});
+  np.npcs=(old.npcs||[]).map(n=>Object.assign({},n,{hp:n.hpMax,notas:wipeNotas?"":(n.notas||"")}));
+  np.diario=wipeDiario?[]:(old.diario||[]);
+  if(!wipeDiario)np.diario.push({at:Date.now(),s:1,t:"Mesa resetada para o início da campanha",k:"auto"});
+  np.done=keepLog?(old.done||[]):[];
+  PRIV=np;UNDO=[before];
+  if(!keepLog){LOG=[];myRolls=[];if(fdb)await fdb.ref("rolagens").remove().catch(()=>{})}
+  if(fdb){await fdb.ref("publico/fx").remove().catch(()=>{});lastFxId=null}
+  if(wipePistas){if(fdb){await fdb.ref("publico/pistas").remove().catch(()=>{});await fdb.ref("mestre/pistas").remove().catch(()=>{})}PISTAS={};MPISTAS={};ls("us-pistas",{});ls("us-mpistas",{})}
+  savePub();savePriv();if(LOCAL())saveLocal();
+  $("#rsModal").classList.remove("on");renderAll();renderFeeds();
+  toast("Mesa resetada. Backup salvo; se precisar, use Desfazer ou Backup.");
+}
 
 /* ---------- boot ---------- */
 renderAll();
