@@ -355,6 +355,34 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .rsopt{display:flex;flex-direction:column;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
 .danger{border-color:rgba(214,69,65,.45)}
 #rsOk:not(:disabled){background:var(--bad);border-color:var(--bad);color:#fff}
+.mapmaster{max-width:1500px;margin:0 auto}
+.mgrid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media(max-width:1000px){.mgrid2{grid-template-columns:1fr}}
+.mnav{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.mg{display:flex;gap:4px;flex-wrap:wrap;align-items:center}.mg>span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-right:6px;min-width:70px}
+.mg button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 10px;font-size:13px}.mg button.on{background:var(--red);border-color:var(--red);color:#fff}
+.mapwrap{position:relative;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0d1014;touch-action:none;user-select:none}
+.mapbg,.mapbg svg,.mapbg img{position:absolute;inset:0;width:100%;height:100%;display:block}.mapbg img{object-fit:cover}
+.maplayer{position:absolute;inset:0}
+.mapwrap.mode-mark{cursor:crosshair}
+.tk{position:absolute;width:4.2%;min-width:30px;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:3px solid var(--c);background:#111;box-shadow:0 2px 8px rgba(0,0,0,.7);z-index:3;display:flex;align-items:center;justify-content:center}
+.master .tk{cursor:grab}
+.tk img{width:100%;height:100%;object-fit:cover;border-radius:50%;pointer-events:none}
+.tk b{font-family:"Bebas Neue";font-size:16px;font-weight:400;color:#fff;pointer-events:none}
+.tk span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-size:11px;font-weight:600;white-space:nowrap;background:rgba(0,0,0,.75);padding:0 5px;border-radius:4px;color:#fff;pointer-events:none}
+.tk.en{border-radius:8px;background:#2a0f0f}.tk.en img{border-radius:6px}
+.tk.sel{outline:3px solid #fff;outline-offset:2px;z-index:5}
+.tk.me{animation:tkme 1.6s ease-in-out infinite;z-index:4}
+@keyframes tkme{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
+.tk.hid{opacity:.55;border-style:dashed}.mk.hid{opacity:.6}
+.mk{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;gap:4px;cursor:pointer}
+.mk .mki{width:26px;height:26px;border-radius:50%;background:rgba(15,15,18,.92);border:2px solid #e0a030;display:flex;align-items:center;justify-content:center;font-size:13px}
+.mk-aparicao .mki{border-color:#b07cff}.mk-pista .mki{border-color:#6fa8ff}.mk-perigo .mki{border-color:#d64541}.mk-npc .mki{border-color:#cfd3d8}.mk-item .mki{border-color:#4caf6a}.mk-local .mki{border-color:#9aa3ad}
+.mk .mkl{font-size:11px;font-weight:600;background:rgba(0,0,0,.72);padding:1px 6px;border-radius:4px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.mk.hid .mki{border-style:dashed}
+.lasso{position:absolute;border:1.5px dashed #fff;background:rgba(255,255,255,.08);z-index:6;pointer-events:none}
+.mkrow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}.mkrow .lnk{flex:1;text-align:left;background:none;border:0;color:#fff;padding:0;font-weight:600}
+.mkrow .b{padding:3px 9px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 </style>
@@ -489,7 +517,7 @@ const FIRE=/pistola|rev[óo]lver|rifle|escopeta|espingarda|carabina|fuzil/i;
 
 /* ---------- state ---------- */
 function pubDefaults(){
-  const s={sessao:1,hora:"23:12",ruido:0,pedido:null,ini:{ativa:false,rodada:1,turno:0,lista:[],inicio:0},sup:{comida:3,agua:4,remedios:1,combustivel:2,baterias:2},pcs:{}};
+  const s={sessao:1,hora:"23:12",ruido:0,pedido:null,ini:{ativa:false,rodada:1,turno:0,lista:[],inicio:0},sup:{comida:3,agua:4,remedios:1,combustivel:2,baterias:2},mapa:{tokens:{},marks:{}},pcs:{}};
   PCS.forEach(p=>{s.pcs[p.id]={hp:p.hp,hpMax:p.hp,forca:p.a[0],agil:p.a[1],intel:p.a[2],vont:p.a[3],prec:p.a[4],rd:p.rd,
     medo:0,infec:0,feridas:0,falhas:0,estavel:false,mun:p.mun,munNome:p.munNome,kit:p.kit,evo:0,
     ini:INI[p.id],esp:p.esp,hab:p.hab,equip:p.equip,pers:p.pers,hist:p.hist}});
@@ -500,7 +528,7 @@ function privDefaults(){
   PCS.forEach(p=>{s.pcs[p.id]={seg:"",traumas:"",notas:""}});
   return s;
 }
-function mergePub(o){const d=pubDefaults();if(!o||typeof o!=="object")return d;const out=Object.assign(d,o);out.ini=Object.assign(pubDefaults().ini,o.ini||{});out.sup=Object.assign(pubDefaults().sup,o.sup||{});if(!Array.isArray(out.ini.lista))out.ini.lista=[];out.pcs={};PCS.forEach(p=>{out.pcs[p.id]=Object.assign(pubDefaults().pcs[p.id],(o.pcs||{})[p.id]||{})});return out}
+function mergePub(o){const d=pubDefaults();if(!o||typeof o!=="object")return d;const out=Object.assign(d,o);out.ini=Object.assign(pubDefaults().ini,o.ini||{});out.sup=Object.assign(pubDefaults().sup,o.sup||{});if(!out.mapa||typeof out.mapa!=="object")out.mapa={tokens:{},marks:{}};if(!Array.isArray(out.ini.lista))out.ini.lista=[];out.pcs={};PCS.forEach(p=>{out.pcs[p.id]=Object.assign(pubDefaults().pcs[p.id],(o.pcs||{})[p.id]||{})});return out}
 function mergePriv(o){const d=privDefaults();if(!o||typeof o!=="object")return d;const out=Object.assign(d,o);out.pcs={};PCS.forEach(p=>{out.pcs[p.id]=Object.assign(privDefaults().pcs[p.id],(o.pcs||{})[p.id]||{})});
   if(!Array.isArray(out.npcs))out.npcs=[];if(!Array.isArray(out.enemies))out.enemies=[];if(!Array.isArray(out.secret))out.secret=[];if(!out.difs||typeof out.difs!=="object")out.difs={};if(!Array.isArray(out.diario))out.diario=[];if(!out.medoP||typeof out.medoP!=="object")out.medoP={};return out}
 
@@ -562,7 +590,7 @@ function savePub(){W.pub.save()} function savePriv(){W.priv.save()}
 function saveLog(){if(LOCAL())saveLocal()}
 function editing(){const a=document.activeElement;return a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&(a.type==="text"||a.type==="number")))&&$("#view").contains(a)}
 let queued=false;
-function rerender(){if(editing()){queued=true;return}renderAll()}
+function rerender(){if(editing()||(typeof mapDrag!=="undefined"&&mapDrag)){queued=true;return}renderAll()}
 document.addEventListener("focusout",()=>setTimeout(()=>{if(queued&&!editing()){queued=false;renderAll()}},60));
 
 let connected=false;
@@ -593,7 +621,8 @@ function initFirebase(){
   try{fauth.setPersistence(firebase.auth.Auth.Persistence.SESSION)}catch(e){}
   fdb.ref(".info/connected").on("value",s=>{connected=!!s.val();if(connected)updateOnline();setConn()});
   fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};setConn();renderOnline();if(!role)renderView()});
-  fdb.ref("publico").on("value",s=>{const x=s.val();if(x&&x.json&&x.by!==clientId){try{PUB=mergePub(JSON.parse(x.json))}catch(e){}rerender()}});
+  fdb.ref("publico").on("value",s=>{const x=s.val();if(x&&x.json&&x.by!==clientId){const old=role==="jogador"&&myPc?myScene():null;try{PUB=mergePub(JSON.parse(x.json))}catch(e){}
+    if(old&&myScene()!==old){const S=SCMAP[myScene()];if(S){toast(`${PCMAP[myPc].nome} foi para: ${S.grupo==="Hospital"?"Hospital · ":""}${S.nome}`);mapScene=null}}rerender()}});
   const q=fdb.ref("rolagens").orderByChild("at").limitToLast(150);
   q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id);notifyRoll(r)}ingestOne(r);renderFeeds()});
   fdb.ref("publico/pistas").on("value",s=>onPistas(s.val()||{}));
@@ -838,11 +867,11 @@ function renderTabs(){
   if(!(role==="mestre"&&unlocked)){
     if(role==="jogador"){t.classList.remove("hidden");const tab=ss("us-ptab")||"jogar";
       const np=pistaList(PISTAS,true).length;
-      t.innerHTML=`<button class="${tab==="jogar"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="jogar">Jogar</button><button class="${tab==="pistas"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="pistas">Pistas${np?` <span class="cnt">${np}</span>`:""}</button><button class="${tab==="regras"?"on":""}" data-ptab="regras">Regras</button>`}
+      t.innerHTML=`<button class="${tab==="jogar"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="jogar">Jogar</button><button class="${tab==="mapa"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="mapa">Mapa</button><button class="${tab==="pistas"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="pistas">Pistas${np?` <span class="cnt">${np}</span>`:""}</button><button class="${tab==="regras"?"on":""}" data-ptab="regras">Regras</button>`}
     else t.classList.add("hidden");
     return}
   t.classList.remove("hidden");
-  let h=`<button class="${PRIV.tab==="mesa"?"on":""}" data-tab="mesa">Mesa</button>`;
+  let h=`<button class="${PRIV.tab==="mesa"?"on":""}" data-tab="mesa">Mesa</button><button class="${PRIV.tab==="mapa"?"on":""}" data-tab="mapa">Mapa</button>`;
   PCS.forEach(p=>{const st=pcState(PUB.pcs[p.id]);h+=`<button class="${PRIV.tab===p.id?"on":""}" style="--c:${p.cor}" data-tab="${p.id}"><span class="dot ${st==="ok"?"":st==="dead"?"dead":"down"}"></span>${p.nome}</button>`});
   h+=`<button class="${PRIV.tab==="npcs"?"on":""}" data-tab="npcs">NPCs &amp; Combate</button><button class="${PRIV.tab==="pistas"?"on":""}" data-tab="pistas">Pistas</button><button class="${PRIV.tab==="diario"?"on":""}" data-tab="diario">Diário</button><button class="${PRIV.tab==="regras"?"on":""}" data-tab="regras">Regras</button>`;
   t.innerHTML=h;
@@ -865,6 +894,7 @@ function renderPlayer(){
   const tab=ss("us-ptab")||"jogar";
   if(tab==="regras")return RULES;
   if(tab==="pistas")return renderPistasPlayer();
+  if(tab==="mapa")return renderMapPlayer();
   const pct=clamp(c.hp/c.hpMax*100,0,100);
   const chips=[];
   chips.push(`<span class="chip">Defesa ${10+Number(c.agil)}</span>`);chips.push(`<span class="chip">Iniciativa +${c.ini}</span>`);
@@ -1217,9 +1247,9 @@ const RULES=`<div class="rules">
 function renderView(){
   const v=$("#view");
   if(role==="mestre"&&unlocked){
-    $("#tray").classList.remove("hidden");
+    $("#tray").classList.remove("hidden");if(PRIV.tab==="mapa"&&!$("#tray").dataset.mapmin){$("#tray").classList.add("min");$("#trayTog").textContent="abrir";$("#tray").dataset.mapmin="1"}if(PRIV.tab!=="mapa")delete $("#tray").dataset.mapmin;
     const p=PCMAP[PRIV.tab];
-    v.innerHTML=p?renderPC(p):PRIV.tab==="npcs"?renderNPCs():PRIV.tab==="regras"?RULES:PRIV.tab==="pistas"?renderPistasMaster():PRIV.tab==="diario"?renderDiario():renderMesa();
+    v.innerHTML=p?renderPC(p):PRIV.tab==="npcs"?renderNPCs():PRIV.tab==="regras"?RULES:PRIV.tab==="pistas"?renderPistasMaster():PRIV.tab==="diario"?renderDiario():PRIV.tab==="mapa"?renderMapMaster():renderMesa();
   }else{
     $("#tray").classList.add("hidden");
     v.innerHTML=role==="jogador"&&myPc?renderPlayer():renderLanding();
@@ -1265,7 +1295,7 @@ function iniRollEnemies(){
     const m=Number(en.ini??(ENEMIES[en.k]&&ENEMIES[en.k].ini)??0);PUB.ini.lista.push({key,nome:en.nome,pc:null,valor:d(20)+m,agil:0})});
   sortIni();
 }
-function unlock(){unlocked=true;role="mestre";$("#pinModal").classList.remove("on");updateOnline();ingest();renderAll()}
+function unlock(){unlocked=true;role="mestre";try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();renderAll()}
 $("#pinOk").onclick=pinSubmit;$("#pinCancel").onclick=()=>$("#pinModal").classList.remove("on");
 ["#pinIn","#pinIn2"].forEach(s=>$(s).addEventListener("keydown",e=>{if(e.key==="Enter")pinSubmit()}));
 $("#trayHd").onclick=()=>{const t=$("#tray");t.classList.toggle("min");$("#trayTog").textContent=t.classList.contains("min")?"abrir":"recolher"};
@@ -1377,7 +1407,7 @@ document.addEventListener("change",e=>{
 });
 $("#bkClose").onclick=()=>$("#bkModal").classList.remove("on");
 $("#bkCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("#bkText").value);$("#bkMsg").textContent="Copiado."}catch(e){$("#bkText").select();$("#bkMsg").textContent="Selecione o texto e copie com Ctrl+C."}};
-$("#bkRestore").onclick=()=>{try{const o=JSON.parse($("#bkText").value);if(o.pub)PUB=mergePub(o.pub);if(o.priv){const pin=PRIV.pinHash;PRIV=mergePriv(o.priv);PRIV.pinHash=pin}savePub();savePriv();renderAll();$("#bkMsg").textContent="Backup restaurado."}catch(e){$("#bkMsg").textContent="Texto inválido."}};
+$("#bkRestore").onclick=()=>{try{const o=JSON.parse($("#bkText").value);if(o.pub)PUB=mergePub(o.pub);if(o.priv){const pin=PRIV.pinHash;PRIV=mergePriv(Object.assign({},PRIV,o.priv));PRIV.pinHash=pin;if(o.priv.mapa){mapState();syncMapPub()}}savePub();savePriv();renderAll();$("#bkMsg").textContent="Backup restaurado."}catch(e){$("#bkMsg").textContent="Texto inválido."}};
 let arm=false;
 $("#bkReset").onclick=()=>{$("#bkModal").classList.remove("on");openReset()};
 const __oldReset=()=>{if(!arm){arm=true;$("#bkReset").textContent="Clique de novo p/ confirmar";setTimeout(()=>{arm=false;$("#bkReset").textContent="Resetar fichas"},3000);return}
@@ -1605,6 +1635,214 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-bk]");if(!
 /* ---------- QoL: PWA ---------- */
 if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 
+/* ---------- MAPS ---------- */
+const MCAT={adm:"#6b7280",enf:"#3f72c4",uti:"#c0484a",cir:"#2fa08d",lab:"#6366d1",serv:"#d1a23a",alim:"#d9803a",far:"#3d9d62",rest:"#9b2f2f"};
+const Q={TL:[60,60,390,250],TR:[550,60,390,250],BL:[60,390,390,250],BR:[550,390,390,250]};
+function quad(a,b,c,d){return[[...Q.TL,a[0],a[1]],[...Q.TR,b[0],b[1]],[...Q.BL,c[0],c[1]],[...Q.BR,d[0],d[1]]].map(r=>({x:r[0],y:r[1],w:r[2],h:r[3],n:r[4],c:r[5]}))}
+const INT=["Internação (Quartos)","enf"];
+const FLOORS={
+  sub:{nome:"Subsolo",rooms:[{x:60,y:60,w:390,h:210,n:"Laboratórios de Pesquisa",c:"lab"},{x:550,y:60,w:390,h:210,n:"Área Técnica e Manutenção",c:"adm"},{x:60,y:310,w:250,h:110,n:"Depósito",c:"adm"},{x:350,y:310,w:100,h:110,n:"",c:"rest",x2:1},
+    {x:60,y:460,w:430,h:180,n:"Estacionamento (acesso externo)",c:"adm"},{x:550,y:460,w:390,h:180,n:"Central de Energia (Geradores)",c:"adm"}],cross:"sub"},
+  t:{nome:"Térreo",rooms:[{x:60,y:110,w:270,h:230,n:"Pronto Socorro",c:"uti"},{x:60,y:390,w:330,h:250,n:"Emergência",c:"uti"},{x:380,y:150,w:240,h:190,n:"Recepção",c:"adm",light:1},
+    {x:670,y:80,w:270,h:160,n:"Administração",c:"adm"},{x:670,y:280,w:270,h:170,n:"Farmácia",c:"far"},{x:700,y:490,w:240,h:150,n:"Café / Lanchonete",c:"alim"},{x:440,y:470,w:180,h:120,n:"Segurança",c:"adm"}],cross:"t"},
+  a1:{nome:"1º andar",rooms:quad(["Enfermaria Geral","enf"],["UTI","uti"],["Centro Cirúrgico","cir"],["Sala de Recuperação","enf"])},
+  a2:{nome:"2º andar",rooms:quad(INT,["Pediatria","enf"],["Maternidade","enf"],["Laboratório de Análises","lab"])},
+  a3:{nome:"3º andar",rooms:quad(INT,["Cardiologia","cir"],["Endoscopia","cir"],["Radiologia (Raio X)","serv"])},
+  a4:{nome:"4º andar",rooms:quad(INT,["Oncologia","enf"],["Hemodinâmica","cir"],["Banco de Sangue","serv"])},
+  a5:{nome:"5º andar",rooms:quad(INT,["Neurologia","enf"],["Fisioterapia","serv"],["Psiquiatria","enf"])},
+  a6:{nome:"6º andar",rooms:quad(INT,["Ortopedia","enf"],["Reabilitação","serv"],["Serviço Social","adm"])},
+  a7:{nome:"7º andar",rooms:quad(INT,["Pneumologia","enf"],["Terapia Intensiva","uti"],["Sala de Reunião","adm"])},
+  a8:{nome:"8º andar",rooms:quad(INT,["Dermatologia","enf"],["Centro de Estudos","adm"],["Biblioteca","adm"])},
+  a9:{nome:"9º andar",rooms:quad(INT,["Infectologia","enf"],["Área de Pesquisa","lab"],["Documentação","adm"])},
+  a10:{nome:"10º andar",rooms:quad(INT,["Urologia","enf"],["Ginecologia","cir"],["Laboratório (Microbiologia)","lab"])},
+  a11:{nome:"11º andar",rooms:quad(INT,["Cirurgia Vascular","enf"],["Almoxarifado","serv"],["Sala de Equipamentos","alim"])},
+  a12:{nome:"12º andar · Heliponto",roof:1,rooms:[]},
+  ext:{nome:"Área externa",ext:1,rooms:[]}
+};
+const SCENES=[{id:"sp",nome:"São Paulo",grupo:"Cidade",img:"mapas/sao-paulo.jpg",ar:1536/1024,spawn:[.62,.46]},
+  {id:"ext",nome:"Área externa",grupo:"Hospital",ar:10/7,spawn:[.17,.64]},
+  ...["sub","t","a1","a2","a3","a4","a5","a6","a7","a8","a9","a10","a11","a12"].map(id=>({id,nome:FLOORS[id].nome.replace(" · Heliponto",""),grupo:"Hospital",ar:10/7,spawn:id==="t"?[.5,.12]:[.5,.5]}))];
+const SCMAP=Object.fromEntries(SCENES.map(s=>[s.id,s]));
+const MKT={evento:["⚡","Evento"],aparicao:["👁","Aparição"],pista:["🔎","Pista"],npc:["👤","NPC"],perigo:["⚠","Perigo"],item:["✚","Recurso"],local:["◆","Local"]};
+
+function wrapLabel(s,max){const w=String(s).split(" ");const L=[];let cur="";w.forEach(x=>{if((cur+" "+x).trim().length>max&&cur){L.push(cur);cur=x}else cur=(cur+" "+x).trim()});if(cur)L.push(cur);return L}
+function roomSVG(r){
+  const col=MCAT[r.c]||"#555";const fs=r.w<200?22:28;const lines=wrapLabel(r.n,r.w<200?12:18);
+  const cy=r.y+r.h/2-(lines.length-1)*fs*.55;
+  return`<g><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="6" fill="${col}" fill-opacity="${r.light?.18:.30}" stroke="${col}" stroke-width="3"/>
+  ${r.x2?`<path d="M${r.x+20} ${r.y+20} L${r.x+r.w-20} ${r.y+r.h-20} M${r.x+r.w-20} ${r.y+20} L${r.x+20} ${r.y+r.h-20}" stroke="#e24b4a" stroke-width="8" stroke-linecap="round"/>`:""}
+  ${lines.map((l,i)=>`<text x="${r.x+r.w/2}" y="${cy+i*fs*1.1}" text-anchor="middle" dominant-baseline="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="${fs}" fill="#eef0f3" fill-opacity=".92" letter-spacing="1">${esc(l)}</text>`).join("")}</g>`;
+}
+function iconElev(x,y){return`<g transform="translate(${x},${y})"><rect width="34" height="40" rx="4" fill="#252a32" stroke="#59606b" stroke-width="2"/><path d="M10 15 L17 8 L24 15 M10 25 L17 32 L24 25" stroke="#9aa3ad" stroke-width="2.5" fill="none"/></g>`}
+function iconStairs(x,y){return`<g transform="translate(${x},${y})"><rect width="40" height="40" rx="4" fill="#252a32" stroke="#59606b" stroke-width="2"/><path d="M6 34 H14 V26 H22 V18 H30 V10 H36" stroke="#9aa3ad" stroke-width="2.5" fill="none"/></g>`}
+function floorSVG(id){
+  const F=FLOORS[id];let s=`<svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><defs><pattern id="gr" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0H0V25" fill="none" stroke="#1b2028" stroke-width="1"/></pattern></defs>
+  <rect width="1000" height="700" fill="#0d1014"/><rect width="1000" height="700" fill="url(#gr)"/>`;
+  if(F.ext){
+    s+=`<rect x="0" y="0" width="1000" height="700" fill="#141a12" opacity=".6"/>
+    <rect x="320" y="40" width="420" height="110" rx="6" fill="#2a2f35" stroke="#59606b" stroke-width="3"/><text x="530" y="98" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="30" fill="#cfd3d8">Estacionamento</text>
+    ${[0,1,2,3,4,5,6].map(i=>`<rect x="${340+i*56}" y="56" width="40" height="22" rx="3" fill="#3b424b"/>`).join("")}
+    <rect x="360" y="210" width="340" height="280" rx="6" fill="#262b31" stroke="#8a929b" stroke-width="5"/><path d="M360 210 L700 490 M700 210 L360 490" stroke="#30363d" stroke-width="2"/>
+    <text x="530" y="340" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="40" fill="#eef0f3">Prédio principal</text><text x="530" y="380" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="22" fill="#9aa3ad">Hospital Universitário São Vicente</text>
+    <path d="M250 350 H350" stroke="#e0a030" stroke-width="5" marker-end="url(#ar)"/><text x="150" y="340" font-family="Bebas Neue,Impact" font-size="26" fill="#e0a030">Entrada principal</text>
+    <path d="M820 350 H712" stroke="#9aa3ad" stroke-width="5"/><text x="790" y="330" font-family="Bebas Neue,Impact" font-size="24" fill="#cfd3d8">Entrada de serviço</text>
+    <rect x="60" y="540" width="270" height="120" rx="6" fill="#2a2f35" stroke="#59606b" stroke-width="3"/><text x="195" y="608" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="26" fill="#cfd3d8">Carga e descarga</text>
+    <circle cx="860" cy="590" r="75" fill="#2a2f35" stroke="#59606b" stroke-width="3"/><text x="860" y="610" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="70" fill="#cfd3d8">H</text>
+    ${[[80,80],[140,150],[90,220],[880,90],[930,170],[860,240],[200,470],[110,430],[880,430],[950,480]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="${22+((x*y)%14)}" fill="#1e2b1c" stroke="#2b3c28" stroke-width="3"/>`).join("")}
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#e0a030"/></marker></defs></svg>`;return s}
+  s+=`<rect x="40" y="40" width="920" height="620" rx="8" fill="#151920" stroke="#4a515b" stroke-width="6"/>`;
+  if(F.roof){s+=`<rect x="200" y="90" width="600" height="520" rx="10" fill="#22272e" stroke="#59606b" stroke-width="4"/><circle cx="500" cy="350" r="170" fill="none" stroke="#cfd3d8" stroke-width="10"/><text x="500" y="420" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="220" fill="#cfd3d8">H</text>
+    <text x="500" y="640" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="28" fill="#9aa3ad">Heliponto · cobertura</text>${iconStairs(90,100)}${iconElev(870,100)}</svg>`;return s}
+  if(!F.cross){s+=`<rect x="60" y="310" width="880" height="80" fill="#1d222a"/><rect x="450" y="60" width="100" height="580" fill="#1d222a"/>`+iconElev(463,330)+iconElev(503,330)+iconStairs(455,80)+iconStairs(505,580)}
+  else if(F.cross==="t"){s+=`<rect x="330" y="110" width="40" height="530" fill="#1d222a"/><rect x="380" y="340" width="290" height="130" fill="#1d222a"/><rect x="620" y="80" width="50" height="560" fill="#1d222a"/>
+    ${iconElev(470,370)}${iconElev(510,370)}${iconStairs(390,380)}
+    <path d="M500 20 V60" stroke="#e0a030" stroke-width="6"/><path d="M488 44 L500 60 L512 44" fill="#e0a030"/><text x="500" y="18" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="22" fill="#e0a030">Entrada principal</text>
+    <path d="M530 640 V680" stroke="#9aa3ad" stroke-width="6"/><text x="530" y="697" text-anchor="middle" font-family="Bebas Neue,Impact" font-size="18" fill="#9aa3ad">Saída de serviço</text>`}
+  else if(F.cross==="sub"){s+=`<rect x="60" y="270" width="880" height="40" fill="#1d222a"/><rect x="60" y="420" width="880" height="40" fill="#1d222a"/><rect x="490" y="60" width="60" height="580" fill="#1d222a"/>${iconElev(500,320)}${iconStairs(890,320)}`}
+  s+=F.rooms.map(roomSVG).join("")+`</svg>`;return s;
+}
+
+/* map state helpers */
+function mapState(){if(!PRIV.mapa||typeof PRIV.mapa!=="object")PRIV.mapa={tokens:{},marks:{}};if(!PRIV.mapa.tokens)PRIV.mapa.tokens={};if(!PRIV.mapa.marks)PRIV.mapa.marks={};
+  const T=PRIV.mapa.tokens;let added=false;PCS.forEach((p,i)=>{if(!T["pc_"+p.id]){T["pc_"+p.id]={s:"sp",x:.14+(i%3)*.035,y:.33+Math.floor(i/3)*.06,t:"pc",ref:p.id,vis:true};added=true}});if(added)syncMapPub();return PRIV.mapa}
+function syncMapPub(){const M=PRIV.mapa||{tokens:{},marks:{}};const tk={},mk={};
+  Object.entries(M.tokens||{}).forEach(([k,v])=>{if(v.vis||v.t==="pc")tk[k]={s:v.s,x:+v.x.toFixed(4),y:+v.y.toFixed(4),t:v.t,ref:v.ref||null,nome:v.nome||null}});
+  Object.entries(M.marks||{}).forEach(([k,v])=>{if(v.vis)mk[k]={s:v.s,x:+v.x.toFixed(4),y:+v.y.toFixed(4),tipo:v.tipo,nome:v.nome,desc:v.desc||""}});
+  PUB.mapa={tokens:tk,marks:mk}}
+function viewMap(){return role==="mestre"&&unlocked?mapState():(PUB.mapa||{tokens:{},marks:{}})}
+function tokenInfo(k,v){
+  if(v.t==="pc"&&PCMAP[v.ref])return{nome:PCMAP[v.ref].nome,cor:PCMAP[v.ref].cor,img:IMG[v.ref]};
+  if(v.t==="npc"){const n=(PRIV.npcs||[]).find(x=>x.id===v.ref);const nome=v.nome||(n&&n.nome)||"NPC";return{nome,cor:"#b9b4ab",img:IMG[v.ref]||null}}
+  return{nome:v.nome||"Inimigo",cor:"#d64541",img:null,enemy:1};
+}
+let mapScene=null, mapSel=new Set(), mapMode=null, mapDrag=null, mapOpenMark=null;
+function myScene(){const M=viewMap();const t=M.tokens&&M.tokens["pc_"+myPc];return t?t.s:"sp"}
+function scenesWithPcs(){const M=viewMap();const s=new Set();Object.values(M.tokens||{}).forEach(v=>{if(v.t==="pc")s.add(v.s)});return s}
+function currentScene(){const master=role==="mestre"&&unlocked;if(master)return mapScene||PRIV.mapScene||"sp";return mapScene&&scenesWithPcs().has(mapScene)?mapScene:myScene()}
+
+function sceneNav(master){
+  const cur=currentScene();const withPc=scenesWithPcs();const M=viewMap();
+  const cnt=id=>Object.values(M.tokens||{}).filter(v=>v.t==="pc"&&v.s===id).length;
+  const btn=s=>{const n=cnt(s.id);if(!master&&!withPc.has(s.id))return"";return`<button class="${cur===s.id?"on":""}" data-act="mapScene" data-s="${s.id}">${s.nome}${n?` <span class="cnt">${n}</span>`:""}</button>`};
+  const city=SCENES.filter(s=>s.grupo==="Cidade").map(btn).join(""),hosp=SCENES.filter(s=>s.grupo==="Hospital").map(btn).join("");
+  return`<div class="mnav">${city?`<div class="mg"><span>Cidade</span>${city}</div>`:""}${hosp?`<div class="mg"><span>Hospital São Vicente</span>${hosp}</div>`:""}</div>`;
+}
+function mapCanvasHTML(master){
+  const id=currentScene(),S=SCMAP[id]||SCENES[0],M=viewMap();
+  const bg=S.img?`<img src="${S.img}" alt="" draggable="false">`:floorSVG(id);
+  const marks=Object.entries(M.marks||{}).filter(([k,v])=>v.s===id).map(([k,v])=>{const ic=MKT[v.tipo]||MKT.local;
+    return`<div class="mk ${master&&!v.vis?"hid":""} mk-${v.tipo||"local"}" data-mk="${k}" style="left:${v.x*100}%;top:${v.y*100}%" title="${esc(v.nome)}"><span class="mki">${ic[0]}</span><span class="mkl">${esc(v.nome)}</span></div>`}).join("");
+  const toks=Object.entries(M.tokens||{}).filter(([k,v])=>v.s===id).map(([k,v])=>{const I=tokenInfo(k,v);const me=!master&&v.t==="pc"&&v.ref===myPc;
+    return`<div class="tk ${mapSel.has(k)?"sel":""} ${me?"me":""} ${master&&!v.vis&&v.t!=="pc"?"hid":""} ${I.enemy?"en":""}" data-tk="${k}" style="left:${v.x*100}%;top:${v.y*100}%;--c:${I.cor}">${I.img?`<img src="${I.img}" alt="" draggable="false">`:`<b>${esc((I.nome||"?").replace(/^(Dr|Dra)\.?\s/,"").slice(0,2).toUpperCase())}</b>`}<span>${esc(I.nome)}</span></div>`}).join("");
+  return`<div class="mapwrap ${master?"master":""} ${mapMode?"mode-"+mapMode:""}" id="mapwrap" style="aspect-ratio:${S.ar};max-width:calc(${master?82:74}vh * ${S.ar.toFixed(3)});margin:0 auto"><div class="mapbg">${bg}</div><div class="maplayer" id="maplayer">${marks}${toks}</div><div class="lasso hidden" id="lasso"></div></div>`;
+}
+function markPanelHTML(master){
+  const M=viewMap();if(!mapOpenMark||!M.marks[mapOpenMark])return"";const v=M.marks[mapOpenMark];const ic=MKT[v.tipo]||MKT.local;
+  if(!master)return`<div class="card mkp"><div class="small">${ic[0]} ${ic[1]}</div><h3 style="margin:2px 0 6px">${esc(v.nome)}</h3>${v.desc?`<div class="px" style="white-space:pre-wrap;font-family:'Special Elite',monospace;color:#d3d0ca">${esc(v.desc)}</div>`:""}<div class="btnrow" style="margin-top:8px"><button class="b" data-act="mkClose">Fechar</button></div></div>`;
+  return`<div class="card mkp"><div class="row" style="margin-top:0"><label>Tipo</label><select data-mkf="tipo">${Object.entries(MKT).map(([k,x])=>`<option value="${k}" ${v.tipo===k?"selected":""}>${x[0]} ${x[1]}</option>`).join("")}</select>
+    <label class="toggle" style="margin-left:auto"><input type="checkbox" data-mkvis ${v.vis?"checked":""}> visível aos jogadores</label></div>
+    <div class="fld"><label>Nome</label><input type="text" data-mkf="nome" value="${esc(v.nome)}" style="width:100%;padding:6px 8px"></div>
+    <div class="fld"><label>Descrição — os jogadores leem quando estiver visível</label><textarea data-mkf="desc" rows="3">${esc(v.desc||"")}</textarea></div>
+    <div class="fld"><label>Anotação do mestre — só você vê</label><textarea data-mkf="nota" rows="2">${esc(v.nota||"")}</textarea></div>
+    <div class="btnrow" style="margin-top:8px"><button class="b" data-act="mkClose">Fechar</button><button class="b dmg" data-act="mkDel">Apagar marcador</button></div></div>`;
+}
+function selPanelHTML(){
+  const M=mapState();const ks=[...mapSel].filter(k=>M.tokens[k]);
+  const names=ks.map(k=>tokenInfo(k,M.tokens[k]).nome);
+  const opts=SCENES.map(s=>`<option value="${s.id}">${s.grupo==="Hospital"?"Hospital · ":""}${s.nome}</option>`).join("");
+  return`<div class="card mtools">
+   <div class="btnrow"><button class="b" data-act="mapSelPcs">Selecionar o grupo</button><button class="b" data-act="mapSelNone" ${ks.length?"":"disabled"}>Limpar seleção</button>
+     <span class="small" style="margin-left:6px">${ks.length?`Selecionados: <b style="color:#fff">${names.map(esc).join(", ")}</b>`:"Clique numa ficha (Shift/Ctrl para várias) ou arraste num espaço vazio para selecionar em área."}</span></div>
+   ${ks.length?`<div class="btnrow" style="margin-top:8px"><span class="small">Levar para</span><select id="mapDest">${opts}</select><button class="b pri" data-act="mapMove">Mover selecionados</button>
+     <button class="b" data-act="mapVis">${ks.every(k=>M.tokens[k].vis||M.tokens[k].t==="pc")?"Ocultar dos jogadores":"Mostrar aos jogadores"}</button>${ks.some(k=>M.tokens[k].t!=="pc")?`<button class="b dmg" data-act="mapDelTok">Remover do mapa</button>`:""}</div>`:""}
+   <div class="btnrow" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><span class="small">Adicionar</span>
+     <select id="mapNpc"><option value="">NPC…</option>${(PRIV.npcs||[]).map(n=>`<option value="${n.id}">${esc(n.nome)}</option>`).join("")}</select><button class="b" data-act="mapAddNpc">+ NPC</button>
+     <button class="b" data-act="mapAddEnemies">+ Inimigos em cena (${(PRIV.enemies||[]).filter(e=>e.hp>0).length})</button>
+     <button class="b ${mapMode==="mark"?"on":""}" data-act="mapMarkMode">${mapMode==="mark"?"Clique no mapa…":"+ Marcador"}</button></div>
+   <div class="small" style="margin-top:6px">Fichas e marcadores com contorno tracejado estão ocultos para os jogadores.</div></div>`;
+}
+function marksListHTML(){
+  const id=currentScene(),M=mapState();const ms=Object.entries(M.marks).filter(([k,v])=>v.s===id);
+  if(!ms.length)return"";
+  return`<div class="card"><h3>Marcadores desta cena</h3>${ms.map(([k,v])=>{const ic=MKT[v.tipo]||MKT.local;return`<div class="mkrow"><span>${ic[0]}</span><button class="lnk" data-act="mkOpen" data-k="${k}">${esc(v.nome)}</button><span class="small">${ic[1]}</span>
+    <button class="b ${v.vis?"":"pri"}" data-act="mkToggle" data-k="${k}">${v.vis?"Ocultar":"Revelar"}</button></div>`}).join("")}</div>`;
+}
+function renderMapMaster(){
+  mapState();
+  return`<div class="mapmaster">${sceneNav(true)}<div class="mgrid2"><div>${mapCanvasHTML(true)}</div><div class="stack">${selPanelHTML()}<div id="mkpanel">${markPanelHTML(true)}</div>${marksListHTML()}</div></div></div>`;
+}
+function renderMapPlayer(){
+  const id=currentScene(),S=SCMAP[id];const mine=myScene();
+  return`<div class="stack" style="max-width:1100px;margin:0 auto">${sceneNav(false)}
+    <div class="small">Você está em: <b style="color:#fff">${SCMAP[mine]?(SCMAP[mine].grupo==="Hospital"?"Hospital São Vicente · ":"")+SCMAP[mine].nome:"—"}</b>${id!==mine?` · vendo ${S.nome} <button class="b" data-act="mapScene" data-s="${mine}" style="padding:2px 8px;margin-left:6px">Voltar para onde estou</button>`:""}</div>
+    ${mapCanvasHTML(false)}<div id="mkpanel">${markPanelHTML(false)}</div></div>`;
+}
+function refreshMap(){if(mapDrag)return;const w=$("#mapwrap");if(!w)return;
+  const master=role==="mestre"&&unlocked;const view=$("#view");
+  if(master&&PRIV.tab==="mapa"){if(editing())return;view.innerHTML=renderMapMaster()}else if(role==="jogador"&&ss("us-ptab")==="mapa")view.innerHTML=renderMapPlayer()}
+
+/* pointer interactions */
+function mapXY(e){const r=$("#mapwrap").getBoundingClientRect();return[clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1)]}
+document.addEventListener("pointerdown",e=>{
+  const wrap=e.target.closest("#mapwrap");if(!wrap)return;
+  const master=role==="mestre"&&unlocked;
+  const tk=e.target.closest("[data-tk]"),mk=e.target.closest("[data-mk]");
+  if(!master){if(mk){mapOpenMark=mk.dataset.mk;$("#mkpanel").innerHTML=markPanelHTML(false)}return}
+  e.preventDefault();const [x,y]=mapXY(e);const M=mapState();
+  if(mapMode==="mark"){const k="m"+Date.now().toString(36);M.marks[k]={s:currentScene(),x,y,tipo:"evento",nome:"Novo marcador",desc:"",nota:"",vis:false};mapMode=null;mapOpenMark=k;savePriv();refreshMap();return}
+  if(tk){const k=tk.dataset.tk;if(e.shiftKey||e.ctrlKey||e.metaKey){mapSel.has(k)?mapSel.delete(k):mapSel.add(k)}else if(!mapSel.has(k)){mapSel=new Set([k])}
+    mapDrag={type:"tok",x0:x,y0:y,start:Object.fromEntries([...mapSel].filter(q=>M.tokens[q]).map(q=>[q,[M.tokens[q].x,M.tokens[q].y]])),moved:false,before:snap()};
+    document.querySelectorAll("[data-tk]").forEach(el=>el.classList.toggle("sel",mapSel.has(el.dataset.tk)));wrap.setPointerCapture(e.pointerId);return}
+  if(mk){const k=mk.dataset.mk;mapDrag={type:"mk",k,x0:x,y0:y,start:[M.marks[k].x,M.marks[k].y],moved:false};wrap.setPointerCapture(e.pointerId);return}
+  mapDrag={type:"lasso",x0:x,y0:y,add:e.shiftKey||e.ctrlKey||e.metaKey};wrap.setPointerCapture(e.pointerId);
+});
+document.addEventListener("pointermove",e=>{
+  if(!mapDrag||!$("#mapwrap"))return;const [x,y]=mapXY(e);const dx=x-mapDrag.x0,dy=y-mapDrag.y0;
+  if(Math.abs(dx)+Math.abs(dy)>.004)mapDrag.moved=true;
+  if(mapDrag.type==="tok"){Object.entries(mapDrag.start).forEach(([k,[sx,sy]])=>{const el=document.querySelector(`[data-tk="${k}"]`);if(el){el.style.left=clamp(sx+dx,0,1)*100+"%";el.style.top=clamp(sy+dy,0,1)*100+"%"}})}
+  else if(mapDrag.type==="mk"){const el=document.querySelector(`[data-mk="${mapDrag.k}"]`);if(el){el.style.left=clamp(mapDrag.start[0]+dx,0,1)*100+"%";el.style.top=clamp(mapDrag.start[1]+dy,0,1)*100+"%"}}
+  else{const L=$("#lasso");L.classList.remove("hidden");L.style.left=Math.min(x,mapDrag.x0)*100+"%";L.style.top=Math.min(y,mapDrag.y0)*100+"%";L.style.width=Math.abs(dx)*100+"%";L.style.height=Math.abs(dy)*100+"%"}
+});
+document.addEventListener("pointerup",e=>{
+  if(!mapDrag)return;const D=mapDrag;mapDrag=null;if(!$("#mapwrap"))return;const [x,y]=mapXY(e);const dx=x-D.x0,dy=y-D.y0;const M=mapState();
+  if(D.type==="tok"){if(D.moved){Object.entries(D.start).forEach(([k,[sx,sy]])=>{M.tokens[k].x=clamp(sx+dx,0,1);M.tokens[k].y=clamp(sy+dy,0,1)});UNDO.push(D.before);if(UNDO.length>30)UNDO.shift();syncMapPub();savePub();savePriv();renderMeta()}refreshMap();return}
+  if(D.type==="mk"){if(D.moved){M.marks[D.k].x=clamp(D.start[0]+dx,0,1);M.marks[D.k].y=clamp(D.start[1]+dy,0,1);syncMapPub();savePub();savePriv()}else{mapOpenMark=D.k}refreshMap();return}
+  if(!D.moved){if(!D.add)mapSel.clear();refreshMap();return}
+  const x1=Math.min(x,D.x0),x2=Math.max(x,D.x0),y1=Math.min(y,D.y0),y2=Math.max(y,D.y0);if(!D.add)mapSel.clear();
+  Object.entries(M.tokens).forEach(([k,v])=>{if(v.s===currentScene()&&v.x>=x1&&v.x<=x2&&v.y>=y1&&v.y<=y2)mapSel.add(k)});refreshMap();
+});
+function mapAction(a,t){
+  const M=mapState();
+  switch(a){
+    case"mapScene":mapScene=t.dataset.s;if(role==="mestre"&&unlocked){PRIV.mapScene=mapScene;mapOpenMark=null}refreshMapView();return true;
+    case"mkOpen":mapOpenMark=t.dataset.k;refreshMapView();return true;
+    case"mkClose":mapOpenMark=null;const p=$("#mkpanel");if(p)p.innerHTML="";return true;
+  }
+  if(!(role==="mestre"&&unlocked))return false;
+  const before=snap();const done=()=>{pushUndo(before);syncMapPub();savePub();savePriv();refreshMapView()};
+  switch(a){
+    case"mapSelPcs":mapSel=new Set(Object.keys(M.tokens).filter(k=>M.tokens[k].t==="pc"&&M.tokens[k].s===currentScene()));if(!mapSel.size)toast("Nenhum personagem nesta cena.");refreshMapView();return true;
+    case"mapSelNone":mapSel.clear();refreshMapView();return true;
+    case"mapMove":{const dest=$("#mapDest").value,S=SCMAP[dest];const ks=[...mapSel].filter(k=>M.tokens[k]);ks.forEach((k,i)=>{M.tokens[k].s=dest;M.tokens[k].x=clamp(S.spawn[0]+(i%3-1)*.055,0,1);M.tokens[k].y=clamp(S.spawn[1]+Math.floor(i/3)*.085,0,1)});
+      mapScene=dest;PRIV.mapScene=dest;diary(`${ks.map(k=>tokenInfo(k,M.tokens[k]).nome).join(", ")} → ${S.grupo==="Hospital"?"Hospital, ":""}${S.nome}`,"auto");done();return true}
+    case"mapVis":{const ks=[...mapSel].filter(k=>M.tokens[k]&&M.tokens[k].t!=="pc");const show=!ks.every(k=>M.tokens[k].vis);ks.forEach(k=>M.tokens[k].vis=show);done();return true}
+    case"mapDelTok":[...mapSel].forEach(k=>{if(M.tokens[k]&&M.tokens[k].t!=="pc")delete M.tokens[k]});mapSel.clear();done();return true;
+    case"mapAddNpc":{const id=$("#mapNpc").value;if(!id){toast("Escolha um NPC.");return true}const S=SCMAP[currentScene()];const k="npc_"+id+"_"+Date.now().toString(36);M.tokens[k]={s:S.id,x:S.spawn[0]+.05,y:S.spawn[1],t:"npc",ref:id,vis:false};mapSel=new Set([k]);done();toast("NPC colocado oculto. Mostre quando aparecer.");return true}
+    case"mapAddEnemies":{const S=SCMAP[currentScene()];const es=(PRIV.enemies||[]).filter(e=>e.hp>0&&!Object.values(M.tokens).some(v=>v.t==="en"&&v.nome===e.nome));if(!es.length){toast("Nenhum inimigo novo em cena. Adicione em NPCs & Combate.");return true}
+      es.forEach((en,i)=>{M.tokens["en_"+Date.now().toString(36)+i]={s:S.id,x:clamp(S.spawn[0]+.12+(i%4)*.03,0,1),y:clamp(S.spawn[1]-.1+Math.floor(i/4)*.05,0,1),t:"en",nome:en.nome,vis:false}});done();toast("Inimigos colocados ocultos.");return true}
+    case"mapMarkMode":mapMode=mapMode==="mark"?null:"mark";refreshMapView();return true;
+    case"mkToggle":{const k=t.dataset.k;M.marks[k].vis=!M.marks[k].vis;if(M.marks[k].vis)diary(`Revelado no mapa: ${M.marks[k].nome}`,"pista");done();return true}
+    case"mkDel":{if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="Confirmar?";setTimeout(()=>{t.dataset.arm="";t.textContent="Apagar marcador"},2500);return true}delete M.marks[mapOpenMark];mapOpenMark=null;done();return true}
+  }
+  return false;
+}
+function refreshMapView(){const master=role==="mestre"&&unlocked;if(master&&PRIV.tab==="mapa")$("#view").innerHTML=renderMapMaster();else if(role==="jogador"&&ss("us-ptab")==="mapa")$("#view").innerHTML=renderMapPlayer()}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(!t)return;const a=t.dataset.act;if(!/^(map|mk)/.test(a))return;e.stopImmediatePropagation();mapAction(a,t)},true);
+document.addEventListener("input",e=>{const t=e.target;if(!(role==="mestre"&&unlocked)||!mapOpenMark)return;const M=mapState();const m=M.marks[mapOpenMark];if(!m)return;
+  if(t.dataset.mkf){m[t.dataset.mkf]=t.value;if(t.dataset.mkf!=="nota")syncMapPub();savePriv();if(m.vis)savePub();const el=document.querySelector(`[data-mk="${mapOpenMark}"] .mkl`);if(el&&t.dataset.mkf==="nome")el.textContent=t.value}});
+document.addEventListener("change",e=>{const t=e.target;if(!(role==="mestre"&&unlocked)||!mapOpenMark)return;const M=mapState();const m=M.marks[mapOpenMark];if(!m)return;
+  if(t.dataset.mkf==="tipo"){m.tipo=t.value;syncMapPub();savePriv();savePub();refreshMap()}if(t.hasAttribute("data-mkvis")){m.vis=t.checked;syncMapPub();savePriv();savePub();refreshMap()}});
+
 /* ---------- reset ---------- */
 function openReset(){$("#rsIn").value="";$("#rsOk").disabled=true;$("#rsMsg").textContent="";$("#rsModal").classList.add("on");setTimeout(()=>$("#rsIn").focus(),50)}
 $("#rsCancel").onclick=()=>$("#rsModal").classList.remove("on");
@@ -1627,7 +1865,8 @@ async function doReset(){
   np.diario=wipeDiario?[]:(old.diario||[]);
   if(!wipeDiario)np.diario.push({at:Date.now(),s:1,t:"Mesa resetada para o início da campanha",k:"auto"});
   np.done=keepLog?(old.done||[]):[];
-  PRIV=np;UNDO=[before];
+  np.mapa={tokens:{},marks:Object.fromEntries(Object.entries((old.mapa&&old.mapa.marks)||{}).map(([k,v])=>[k,Object.assign({},v,{vis:!!v.base})]))};
+  PRIV=np;UNDO=[before];mapState();syncMapPub();
   if(!keepLog){LOG=[];myRolls=[];if(fdb)await fdb.ref("rolagens").remove().catch(()=>{})}
   if(fdb){await fdb.ref("publico/fx").remove().catch(()=>{});lastFxId=null}
   if(wipePistas){if(fdb){await fdb.ref("publico/pistas").remove().catch(()=>{});await fdb.ref("mestre/pistas").remove().catch(()=>{})}PISTAS={};MPISTAS={};ls("us-pistas",{});ls("us-mpistas",{})}
