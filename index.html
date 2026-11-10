@@ -466,9 +466,9 @@ const PCS=[
   equip:"Pistola (1D8)\nKit médico\nCaderno de pesquisa\nLanterna",mun:8,munNome:"balas (pistola)",kit:3,
   pers:"Inteligente, racional e desconfiado.",
   hist:"Trabalhou em um hospital durante o início do surto. Percebeu que a versão oficial não correspondia aos registros médicos."},
- {id:"marcos",nome:"Marcos",papel:"Ex-Policial",cor:"#3f7fd6",idade:41,origem:"São Paulo",hp:24,a:[4,3,3,5,5],rd:2,
+ {id:"marcos",nome:"Breno",papel:"Ex-Policial",cor:"#3f7fd6",idade:41,origem:"São Paulo",hp:24,a:[4,3,3,5,5],rd:2,
   esp:"Armas de fogo\nTática\nIntimidação",
-  hab:"Cobertura — 1x por rodada, quando um aliado ao alcance é atacado: dá +3 na Defesa dele contra esse ataque OU recebe o ataque no lugar dele (com a Defesa e o colete do Marcos). Não gasta ação.",
+  hab:"Cobertura — 1x por rodada, quando um aliado ao alcance é atacado: dá +3 na Defesa dele contra esse ataque OU recebe o ataque no lugar dele (com a Defesa e o colete do Breno). Não gasta ação.",
   equip:"Pistola (1D8)\nCassetete (1D6)\nColete policial (RD 2)",mun:12,munNome:"balas (pistola)",kit:0,
   pers:"Sério, protetor, direto e desconfiado.",
   hist:"Participou de um comboio de evacuação que desapareceu. Sua esposa e filha estavam entre os passageiros. Meses depois, encontrou uma fotografia do veículo."},
@@ -1091,10 +1091,10 @@ const RULES=`<div class="rules">
 <h2>2. Rodada e iniciativa <span class="new">NOVO</span></h2>
 <div class="formula">Iniciativa = D20 + valor de Iniciativa</div>
 <table><thead><tr><th>Personagem</th><th>Iniciativa</th></tr></thead><tbody>
-<tr><td>Helder</td><td>+2</td></tr><tr><td>Marcos</td><td>+4 (treino tático)</td></tr><tr><td>Rafael</td><td>+3</td></tr>
+<tr><td>Helder</td><td>+2</td></tr><tr><td>Breno</td><td>+4 (treino tático)</td></tr><tr><td>Rafael</td><td>+3</td></tr>
 <tr><td>Júlio</td><td>+4</td></tr><tr><td>André</td><td>+3</td></tr><tr><td>Diego</td><td>+6 (vive em alerta)</td></tr>
 </tbody></table>
-<p class="small">Valor base = Agilidade, com +1 para Marcos e Diego. Penalidades de Infecção e Medo também descontam da iniciativa.</p>
+<p class="small">Valor base = Agilidade, com +1 para Breno e Diego. Penalidades de Infecção e Medo também descontam da iniciativa.</p>
 <ul>
 <li><b>Ao começar um combate</b>, todos rolam iniciativa, e os inimigos também. A ordem vai do maior resultado para o menor.</li>
 <li><b>Empate:</b> quem tem maior Agilidade age primeiro. Se continuar empatado, o personagem do jogador vai antes.</li>
@@ -1129,8 +1129,8 @@ const RULES=`<div class="rules">
 <p>Uma vez por rodada, quando for acertado por um ataque que consegue ver: role <b>D20 + Agilidade</b>. Se igualar ou superar o resultado do ataque, evita o golpe. O custo é perder o movimento no próximo turno. Não funciona contra tiros, a não ser que já esteja correndo para uma cobertura (o mestre decide).</p>
 <h4>Colete (Redução de Dano)</h4>
 <p>Reduz 2 de todo dano físico recebido, com mínimo de 1. O botão “Dano” da ficha já aplica isso.</p>
-<h4>Cobertura — habilidade do Marcos</h4>
-<p>Uma vez por rodada, quando um aliado ao alcance for atacado, Marcos escolhe uma opção: dar <b>+3 na Defesa</b> do aliado contra esse ataque, ou <b>receber o ataque no lugar dele</b> (usando a Defesa e o colete do Marcos). Não gasta a ação dele.</p>
+<h4>Cobertura — habilidade do Breno</h4>
+<p>Uma vez por rodada, quando um aliado ao alcance for atacado, Breno escolhe uma opção: dar <b>+3 na Defesa</b> do aliado contra esse ataque, ou <b>receber o ataque no lugar dele</b> (usando a Defesa e o colete do Breno). Não gasta a ação dele.</p>
 </section>
 
 <section id="r-dano">
@@ -1296,7 +1296,18 @@ function iniRollEnemies(){
     const m=Number(en.ini??(ENEMIES[en.k]&&ENEMIES[en.k].ini)??0);PUB.ini.lista.push({key,nome:en.nome,pc:null,valor:d(20)+m,agil:0})});
   sortIni();
 }
-function unlock(){unlocked=true;role="mestre";try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();renderAll()}
+function migrateNames(){
+  if(PRIV.mig&&PRIV.mig.breno)return false;
+  const fix=s=>typeof s==="string"?s.replace(/\bMarcos\b/g,"Breno").replace(/\bMARCOS\b/g,"BRENO"):s;
+  Object.values(PUB.pcs).forEach(c=>["hab","pers","hist","equip","esp","munNome"].forEach(k=>c[k]=fix(c[k])));
+  Object.values(PRIV.pcs).forEach(c=>["seg","traumas","notas"].forEach(k=>c[k]=fix(c[k])));
+  (PRIV.npcs||[]).forEach(n=>["nome","papel","desc","notas"].forEach(k=>n[k]=fix(n[k])));
+  (PRIV.diario||[]).forEach(d=>d.t=fix(d.t));
+  Object.values((PRIV.mapa&&PRIV.mapa.marks)||{}).forEach(m=>["nome","desc","nota"].forEach(k=>m[k]=fix(m[k])));
+  Object.values(MPISTAS||{}).forEach(x=>{x.titulo=fix(x.titulo);x.texto=fix(x.texto)});
+  PRIV.mig=Object.assign({},PRIV.mig,{breno:true});return true;
+}
+function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();renderAll()}
 $("#pinOk").onclick=pinSubmit;$("#pinCancel").onclick=()=>$("#pinModal").classList.remove("on");
 ["#pinIn","#pinIn2"].forEach(s=>$(s).addEventListener("keydown",e=>{if(e.key==="Enter")pinSubmit()}));
 $("#trayHd").onclick=()=>{const t=$("#tray");t.classList.toggle("min");$("#trayTog").textContent=t.classList.contains("min")?"abrir":"recolher"};
