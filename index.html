@@ -8,6 +8,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#0b0b0d">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Último Sinal">
 <script>
 /* ======================= CONFIGURAÇÃO =======================
    1) Cole aqui o bloco firebaseConfig do seu projeto Firebase.
@@ -301,6 +306,52 @@ tr.dead td{opacity:.4;text-decoration:line-through}
 #fx.landed .oc{opacity:1}
 #fx .skip{font-size:11px;color:#777;margin-top:8px}
 @media (prefers-reduced-motion:reduce){#fx.rolling .die svg,#fx.rolling .die{animation:none}}
+#notes{position:fixed;top:70px;right:14px;z-index:65;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:300px}
+.note{background:rgba(20,20,24,.96);border:1px solid var(--line);border-left:3px solid #777;border-radius:8px;padding:7px 11px;font-size:13px;animation:nin .25s ease-out;transition:opacity .4s,transform .4s}
+.note.out{opacity:0;transform:translateX(30px)} .note .nn{font-family:"Bebas Neue";font-size:18px;font-weight:400}
+@keyframes nin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+#horror{position:fixed;inset:0;z-index:80;display:none;pointer-events:none;align-items:center;justify-content:center;flex-direction:column}
+#horror.on{display:flex}
+#horror canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;opacity:.85}
+#horror.radio canvas{opacity:.55}
+#horror .htxt{position:relative;font-family:"Special Elite",monospace;font-size:clamp(20px,4vw,36px);color:#e8e6e3;text-align:center;padding:20px;text-shadow:0 0 10px #000;animation:hflick 1.4s steps(2) infinite}
+@keyframes hflick{0%{opacity:1}50%{opacity:.6}52%{opacity:.1}54%{opacity:1}}
+#horror.apagao{background:#000;animation:hdark 5.2s ease both}
+@keyframes hdark{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
+#horror.n0317{background:#000}
+#horror.semrosto{background:#000;animation:hsr 1.3s steps(1) both}
+#horror.semrosto img{height:80vh;max-width:90vw;object-fit:cover;filter:grayscale(1) contrast(1.4);animation:hsri 1.3s steps(1) both}
+@keyframes hsr{0%,100%{opacity:0}5%{opacity:1}95%{opacity:1}}
+@keyframes hsri{0%{opacity:0}10%{opacity:1}30%{opacity:0}45%{opacity:1}55%{opacity:0}75%{opacity:1}90%{opacity:0}}
+#horror .clock{font-family:"Bebas Neue";font-size:clamp(90px,25vw,220px);color:#c4302b;animation:hclk .9s steps(1) infinite}
+@keyframes hclk{0%{opacity:1}50%{opacity:.15}}
+body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter:url(#none)}
+@keyframes glt{0%{transform:translate(0,0);text-shadow:2px 0 #f00,-2px 0 #0ff}25%{transform:translate(-6px,3px) skewX(4deg)}50%{transform:translate(5px,-2px);filter:hue-rotate(90deg) contrast(1.6)}75%{transform:translate(-3px,-4px) skewX(-6deg);filter:invert(.15)}100%{transform:translate(4px,2px)}}
+.cnt{background:var(--red);color:#fff;border-radius:10px;font-family:Inter;font-size:10px;padding:0 6px;letter-spacing:0}
+.cont{display:flex;align-items:center;gap:12px;width:100%;max-width:420px;margin:0 auto 18px;background:var(--panel2);border:2px solid var(--c);border-radius:12px;padding:8px 14px;text-align:left}
+.cont img{width:44px;height:58px;object-fit:cover;border-radius:6px}.cont span{flex:1;font-size:15px}.cont b{font-family:"Bebas Neue";font-size:24px;font-weight:400;color:var(--c);letter-spacing:.04em}.cont .ti{font-style:normal;font-size:22px;color:var(--c)}
+.pp{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.ppi{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:8px;padding:6px 8px}
+.ppi img{width:34px;height:44px;object-fit:cover;border-radius:5px}.ppb{flex:1;min-width:0}.ppn{font-weight:600;font-size:13px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ppn i{width:7px;height:7px;border-radius:50%;background:#444;display:inline-block}.ppn i.on{background:var(--good)}
+.supg{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.supg:not(.ro) .sup{flex-direction:column;align-items:flex-start}
+.sup{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sup .sn{font-weight:600;font-size:13px}.sup .sn small{display:block;font-weight:400;color:var(--mut);font-size:11px}
+.sup .v{font-family:"Bebas Neue";font-size:26px}.sup .v.zero{color:var(--bad)}
+.fxg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+@media(max-width:560px){.fxg{grid-template-columns:repeat(2,1fr)}}
+.fxb{background:#120c0d;border:1px solid #3a1c1c;border-radius:8px;padding:8px;text-align:left}.fxb:hover{border-color:var(--red)}
+.fxb b{display:block;font-family:"Bebas Neue";font-size:19px;font-weight:400;color:#ff8a80;letter-spacing:.04em}.fxb span{font-size:11px;color:var(--mut)}
+.pista{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;flex-wrap:wrap}
+.pista img{width:150px;max-height:150px;object-fit:cover;border-radius:8px;cursor:zoom-in;border:1px solid var(--line)}
+.pista .pb{flex:1;min-width:200px}.pista .pt{font-family:"Bebas Neue";font-size:24px;letter-spacing:.04em}
+.pista .px{white-space:pre-wrap;font-family:"Special Elite",monospace;font-size:14px;color:#d3d0ca;margin-top:4px;max-height:140px;overflow:auto}
+.pbox img{max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px;border:1px solid var(--line)}
+.dl{display:grid;grid-template-columns:22px 44px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid #1f1f26;font-size:13px;align-items:start}
+.dl .di{text-align:center}.dl .dt{color:var(--dim);font-size:12px}.dl.k-nota .dx{color:#fff}.dl.k-morte .dx{color:#ff8a80}.dl.k-queda .dx{color:var(--warn)}.dl.k-pista .dx{color:#8fb3e8}.dl.k-efeito .dx{color:#d79bff}
+.dl .clr{background:none;border:0;color:var(--dim)}
+.bkl .r{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 </style>
@@ -343,6 +394,8 @@ tr.dead td{opacity:.4;text-decoration:line-through}
   <div class="box wide">
     <h2 style="font-size:26px;margin-bottom:6px">Backup da mesa</h2>
     <p class="small" style="margin-top:0">Copie o texto para guardar uma cópia, ou cole um backup e clique em Restaurar.</p>
+    <h3 style="font-size:18px;color:var(--red);margin:6px 0">Backups automáticos</h3><div id="bkList"></div>
+    <h3 style="font-size:18px;color:var(--red);margin:12px 0 6px">Backup manual</h3>
     <textarea id="bkText"></textarea>
     <div class="btnrow" style="margin-top:10px;justify-content:space-between">
       <div class="btnrow"><button class="b" id="bkCopy">Copiar</button><button class="b" id="bkRestore">Restaurar</button></div>
@@ -352,6 +405,9 @@ tr.dead td{opacity:.4;text-decoration:line-through}
   </div>
 </div>
 <div id="fx" aria-live="polite"><div class="die"><svg viewBox="0 0 100 100" id="fxSvg"></svg><div class="face" id="fxFace"></div></div><div class="who" id="fxWho"></div><div class="lbl" id="fxLbl"></div><div class="tot" id="fxTot"></div><div class="oc" id="fxOc"></div><div class="skip">toque para fechar</div></div>
+<div id="notes"></div>
+<div id="horror"></div>
+<div class="modal" id="pistaModal"><div class="box wide pbox"><div class="t" style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#ff8a80">Nova pista</div><h2 id="pmT" style="font-size:32px;margin:4px 0 10px"></h2><img id="pmI" class="hidden" alt=""><div id="pmX" style="white-space:pre-wrap;color:#d3d0ca;font-family:'Special Elite',monospace;font-size:15px;margin-top:8px"></div><div class="btnrow" style="justify-content:flex-end;margin-top:14px"><button class="b pri" onclick="document.getElementById('pistaModal').classList.remove('on')">Fechar</button></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -417,20 +473,20 @@ const FIRE=/pistola|rev[óo]lver|rifle|escopeta|espingarda|carabina|fuzil/i;
 
 /* ---------- state ---------- */
 function pubDefaults(){
-  const s={sessao:1,hora:"23:12",ruido:0,pedido:null,ini:{ativa:false,rodada:1,turno:0,lista:[],inicio:0},pcs:{}};
+  const s={sessao:1,hora:"23:12",ruido:0,pedido:null,ini:{ativa:false,rodada:1,turno:0,lista:[],inicio:0},sup:{comida:3,agua:4,remedios:1,combustivel:2,baterias:2},pcs:{}};
   PCS.forEach(p=>{s.pcs[p.id]={hp:p.hp,hpMax:p.hp,forca:p.a[0],agil:p.a[1],intel:p.a[2],vont:p.a[3],prec:p.a[4],rd:p.rd,
     medo:0,infec:0,feridas:0,falhas:0,estavel:false,mun:p.mun,munNome:p.munNome,kit:p.kit,evo:0,
     ini:INI[p.id],esp:p.esp,hab:p.hab,equip:p.equip,pers:p.pers,hist:p.hist}});
   return s;
 }
 function privDefaults(){
-  const s={pinHash:null,pcs:{},npcs:[],enemies:[],secret:[],difs:{},tab:"mesa"};
+  const s={pinHash:null,pcs:{},npcs:[],enemies:[],secret:[],difs:{},medoP:{},diario:[],tab:"mesa"};
   PCS.forEach(p=>{s.pcs[p.id]={seg:"",traumas:"",notas:""}});
   return s;
 }
-function mergePub(o){const d=pubDefaults();if(!o||typeof o!=="object")return d;const out=Object.assign(d,o);out.ini=Object.assign(pubDefaults().ini,o.ini||{});if(!Array.isArray(out.ini.lista))out.ini.lista=[];out.pcs={};PCS.forEach(p=>{out.pcs[p.id]=Object.assign(pubDefaults().pcs[p.id],(o.pcs||{})[p.id]||{})});return out}
+function mergePub(o){const d=pubDefaults();if(!o||typeof o!=="object")return d;const out=Object.assign(d,o);out.ini=Object.assign(pubDefaults().ini,o.ini||{});out.sup=Object.assign(pubDefaults().sup,o.sup||{});if(!Array.isArray(out.ini.lista))out.ini.lista=[];out.pcs={};PCS.forEach(p=>{out.pcs[p.id]=Object.assign(pubDefaults().pcs[p.id],(o.pcs||{})[p.id]||{})});return out}
 function mergePriv(o){const d=privDefaults();if(!o||typeof o!=="object")return d;const out=Object.assign(d,o);out.pcs={};PCS.forEach(p=>{out.pcs[p.id]=Object.assign(privDefaults().pcs[p.id],(o.pcs||{})[p.id]||{})});
-  if(!Array.isArray(out.npcs))out.npcs=[];if(!Array.isArray(out.enemies))out.enemies=[];if(!Array.isArray(out.secret))out.secret=[];if(!out.difs||typeof out.difs!=="object")out.difs={};return out}
+  if(!Array.isArray(out.npcs))out.npcs=[];if(!Array.isArray(out.enemies))out.enemies=[];if(!Array.isArray(out.secret))out.secret=[];if(!out.difs||typeof out.difs!=="object")out.difs={};if(!Array.isArray(out.diario))out.diario=[];if(!out.medoP||typeof out.medoP!=="object")out.medoP={};return out}
 
 let PUB=pubDefaults(), PRIV=privDefaults(), LOG=[];
 let role=null, myPc=null, unlocked=false;
@@ -479,7 +535,7 @@ function writer(path,body){
     if(!fdb||!(role==="mestre"&&unlocked))return;
     if(busy){again=true;return}
     busy=true;
-    try{await fdb.ref(path).set({json:JSON.stringify(body()),by:clientId,at:Date.now()});setConn()}
+    try{await fdb.ref(path).update({json:JSON.stringify(body()),by:clientId,at:Date.now()});setConn()}
     catch(e){toast("Não consegui salvar: "+(e&&e.code||"erro"))}
     busy=false;if(again){again=false;flush()}
   }
@@ -523,15 +579,19 @@ function initFirebase(){
   fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};setConn();renderOnline();if(!role)renderView()});
   fdb.ref("publico").on("value",s=>{const x=s.val();if(x&&x.json&&x.by!==clientId){try{PUB=mergePub(JSON.parse(x.json))}catch(e){}rerender()}});
   const q=fdb.ref("rolagens").orderByChild("at").limitToLast(150);
-  q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id)}ingestOne(r);renderFeeds()});
+  q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id);notifyRoll(r)}ingestOne(r);renderFeeds()});
+  fdb.ref("publico/pistas").on("value",s=>onPistas(s.val()||{}));
+  fdb.ref("publico/fx").on("value",s=>onFx(s.val()));
   q.on("child_removed",s=>{const v=s.val()||{};LOG=LOG.filter(x=>x.id!==v.id);renderFeeds()});
   fauth.onAuthStateChanged(u=>{
     const isM=!!(u&&u.email&&MASTER_EMAIL&&u.email.toLowerCase()===MASTER_EMAIL.toLowerCase());
     if(isM){
       fdb.ref("mestre").on("value",s=>{const x=s.val();if(x&&x.json){if(x.by!==clientId){try{PRIV=mergePriv(JSON.parse(x.json))}catch(e){}}}
-        if(!unlocked)unlock();else rerender();
+        if(!unlocked){unlock();setTimeout(()=>autoBackup(false),2500)}else rerender();
         LOG.forEach(ingestOne);
       },e=>toast("Sem acesso à área do mestre: confira as regras do Firebase."));
+      fdb.ref("mestre/pistas").on("value",s=>{MPISTAS=s.val()||{};if(PRIV.tab==="pistas")rerender()},()=>{});
+      fdb.ref("mestre/backups").on("value",s=>{BACKUPS=s.val()||{};const el=$("#bkList");if(el)el.innerHTML=backupsHTML()},()=>{});
     }else if(unlocked){unlocked=false;role=null;renderAll()}
   });
   setConn();renderAll();
@@ -540,7 +600,7 @@ let booted=false;
 function bootLocal(){
   if(booted)return;booted=true;capsReady=true;fdb=null;
   const a=ls("us-mesa-pub"),b=ls("us-mesa-priv"),c=ls("us-mesa-log");
-  if(a)PUB=mergePub(a);if(b)PRIV=mergePriv(b);if(Array.isArray(c))LOG=c;
+  if(a)PUB=mergePub(a);if(b)PRIV=mergePriv(b);if(Array.isArray(c))LOG=c;PISTAS=ls("us-pistas")||{};MPISTAS=ls("us-mpistas")||{};
   setConn();renderAll();
 }
 
@@ -556,6 +616,7 @@ const DIE_SHAPES={
 };
 let fxTimers=[];
 function diceFx(r){
+  sfxDice();
   const fx=document.getElementById("fx");if(!fx)return;
   fxTimers.forEach(clearTimeout);fxTimers=[];
   const m=String(r.dice||"").match(/(\d*)D(\d+)/i);const n=m?Number(m[1]||1):1;let f=m?Number(m[2]):20;
@@ -609,10 +670,13 @@ function applyEffects(r){
       PUB.ini.lista=(PUB.ini.lista||[]).filter(x=>x.key!==key).concat({key,nome,pc:r.pc||null,valor:r.total,agil:r.pc&&PUB.pcs[r.pc]?Number(PUB.pcs[r.pc].agil):0});
       sortIni();changed=true}
   }
+  if(fearEffect(r))changed=true;
   const c=PUB.pcs[r.pc];
+  if(c&&r.dice==="D20"&&(r.nat===20||r.nat===1)&&["teste","ataque"].includes(r.kind))diary(`${PCMAP[r.pc].nome}: ${r.nat===20?"crítico":"falha crítica"} em ${r.label}`,"critico");
   if(c){
     if(r.kind==="morte"&&c.hp<=0&&!c.estavel&&c.falhas<3){
-      if(r.nat===20){c.hp=1;c.falhas=0}else if(r.nat===1)c.falhas=clamp(c.falhas+2,0,3);else if(r.total<10)c.falhas=clamp(c.falhas+1,0,3);changed=true}
+      if(r.nat===20){c.hp=1;c.falhas=0;diary(`${PCMAP[r.pc].nome} voltou a si com 1 PV (natural 20)`,"queda")}else if(r.nat===1)c.falhas=clamp(c.falhas+2,0,3);else if(r.total<10)c.falhas=clamp(c.falhas+1,0,3);
+      if(c.falhas>=3)diary(`${PCMAP[r.pc].nome} morreu`,"morte");changed=true}
     if(r.kind==="infec"&&c.infec>=1&&c.infec<5){const dif=11+c.infec;
       if(r.total<dif&&r.nat!==20)c.infec++;else if(c.infec===1&&(r.total>=dif+5||r.nat===20))c.infec=0;changed=true}
     if(r.kind==="ataque"&&r.ammo){c.mun=Math.max(0,c.mun-1);if(r.fire)PUB.ruido=clamp(PUB.ruido+1,0,5);changed=true}
@@ -744,12 +808,12 @@ function renderMeta(){
     let pip="";for(let i=1;i<=5;i++)pip+=`<button class="pip ${i<=PUB.ruido?"on":""}" data-act="ruido" data-v="${i}"></button>`;
     m.innerHTML=`<label>Sessão <input type="number" id="sessao" min="1" value="${PUB.sessao}"></label><label>Hora <input type="text" id="hora" value="${esc(PUB.hora)}"></label>
       <label>Ruído <span class="pips" style="--pc:${PUB.ruido>=5?"#d64541":PUB.ruido>=3?"#e0a030":"#888"}">${pip}<button class="clr" data-act="ruido" data-v="0">zerar</button></span></label>
-      <span class="conn" id="conn"></span><button class="iconbtn" data-act="backup">Backup</button><button class="iconbtn" data-act="sairMestre">Sair do mestre</button>`;
+      <span class="conn" id="conn"></span><button class="iconbtn" data-act="undo" ${UNDO.length?"":"style=\"opacity:.5\""} title="Desfazer a última alteração">↶ Desfazer${UNDO.length?` (${UNDO.length})`:""}</button><button class="iconbtn" data-act="som" title="Som">${soundOn()?"🔊":"🔇"}</button><button class="iconbtn" data-act="backup">Backup</button><button class="iconbtn" data-act="sairMestre">Sair do mestre</button>`;
   }else{
     let pip="";for(let i=1;i<=5;i++)pip+=`<span class="pip ${i<=PUB.ruido?"on":""}"></span>`;
     m.innerHTML=`<label>Sessão ${PUB.sessao}</label><label>Hora <b style="color:#fff;font-weight:600">${esc(PUB.hora)}</b></label>
       <label>Ruído <span class="pips ro" style="--pc:${PUB.ruido>=5?"#d64541":PUB.ruido>=3?"#e0a030":"#888"}">${pip}</span></label>
-      <span class="conn" id="conn"></span>${role==="jogador"?`<button class="iconbtn" data-act="trocar">Trocar personagem</button>`:""}<button class="iconbtn" data-act="abrirMestre">Mestre 🔒</button>`;
+      <span class="conn" id="conn"></span><button class="iconbtn" data-act="som" title="Som">${soundOn()?"🔊":"🔇"}</button>${role==="jogador"?`<button class="iconbtn" data-act="trocar">Trocar personagem</button>`:""}<button class="iconbtn" data-act="abrirMestre">Mestre 🔒</button>`;
   }
   setConn();
 }
@@ -757,13 +821,14 @@ function renderTabs(){
   const t=$("#tabs");
   if(!(role==="mestre"&&unlocked)){
     if(role==="jogador"){t.classList.remove("hidden");const tab=ss("us-ptab")||"jogar";
-      t.innerHTML=`<button class="${tab==="jogar"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="jogar">Jogar</button><button class="${tab==="regras"?"on":""}" data-ptab="regras">Regras</button>`}
+      const np=pistaList(PISTAS,true).length;
+      t.innerHTML=`<button class="${tab==="jogar"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="jogar">Jogar</button><button class="${tab==="pistas"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="pistas">Pistas${np?` <span class="cnt">${np}</span>`:""}</button><button class="${tab==="regras"?"on":""}" data-ptab="regras">Regras</button>`}
     else t.classList.add("hidden");
     return}
   t.classList.remove("hidden");
   let h=`<button class="${PRIV.tab==="mesa"?"on":""}" data-tab="mesa">Mesa</button>`;
   PCS.forEach(p=>{const st=pcState(PUB.pcs[p.id]);h+=`<button class="${PRIV.tab===p.id?"on":""}" style="--c:${p.cor}" data-tab="${p.id}"><span class="dot ${st==="ok"?"":st==="dead"?"dead":"down"}"></span>${p.nome}</button>`});
-  h+=`<button class="${PRIV.tab==="npcs"?"on":""}" data-tab="npcs">NPCs &amp; Combate</button><button class="${PRIV.tab==="regras"?"on":""}" data-tab="regras">Regras</button>`;
+  h+=`<button class="${PRIV.tab==="npcs"?"on":""}" data-tab="npcs">NPCs &amp; Combate</button><button class="${PRIV.tab==="pistas"?"on":""}" data-tab="pistas">Pistas</button><button class="${PRIV.tab==="diario"?"on":""}" data-tab="diario">Diário</button><button class="${PRIV.tab==="regras"?"on":""}" data-tab="regras">Regras</button>`;
   t.innerHTML=h;
 }
 
@@ -771,7 +836,9 @@ function renderTabs(){
 function onlinePcs(){const s=new Set();Object.entries(ONLINE).forEach(([k,o])=>{if(o&&o.pc&&k!==clientId)s.add(o.pc)});if(role==="jogador"&&myPc)s.add(myPc);return s}
 function renderLanding(){
   const on=onlinePcs();
+  const last=ls("us-last-pc");
   return`<div class="wrap-narrow land"><h1>Quem é você?</h1><p>Escolha seu personagem para entrar na mesa.</p>
+  ${last&&PCMAP[last]?`<button class="cont" style="--c:${PCMAP[last].cor}" data-pick="${last}"><img src="${IMG[last]}" alt=""><span>Continuar como <b>${PCMAP[last].nome}</b></span><i class="ti">→</i></button>`:""}
   <div class="pick">${PCS.map(p=>`<button style="--c:${p.cor}" data-pick="${p.id}"><img src="${IMG[p.id]}" alt=""><div class="nm"><b>${p.nome}</b><span>${p.papel}</span></div>${on.has(p.id)?`<span class="taken">● na mesa</span>`:""}</button>`).join("")}</div>
   <button class="mbtn" data-act="abrirMestre">Sou o mestre 🔒</button></div>`;
 }
@@ -781,6 +848,7 @@ function renderPlayer(){
   const p=PCMAP[myPc],c=PUB.pcs[myPc],st=pcState(c),pen=penalties(c);
   const tab=ss("us-ptab")||"jogar";
   if(tab==="regras")return RULES;
+  if(tab==="pistas")return renderPistasPlayer();
   const pct=clamp(c.hp/c.hpMax*100,0,100);
   const chips=[];
   chips.push(`<span class="chip">Defesa ${10+Number(c.agil)}</span>`);chips.push(`<span class="chip">Iniciativa +${c.ini}</span>`);
@@ -827,6 +895,8 @@ function renderPlayer(){
     <div class="card"><h3>Dados livres</h3>
       <div class="dicegrid">${[4,6,8,10,12,20,100].map(f=>`<button data-act="free" data-f="${f}">D${f}</button>`).join("")}</div>
       <div class="mods"><span class="step">Quantidade <button class="b" data-act="qty" data-v="-1">−</button><b>${freeQty}</b><button class="b" data-act="qty" data-v="1">+</button></span></div></div>
+    ${partyPlayerHTML()}
+    ${supPlayerHTML()}
     <div class="card"><h3>Rolagens da mesa</h3><div class="feed" data-feed="30">${feedHTML(30)}</div></div>
     <details class="card"><summary>Minha ficha</summary>
       <div class="fld"><label>Especialidades</label><div class="ro">${esc(c.esp)}</div></div>
@@ -869,6 +939,8 @@ function renderMesa(){
       <div class="row"><label>Quem</label><div class="sel">${alvoSel}</div></div>
       <div class="row"><label>Aviso</label><input type="text" id="pdTxt" value="${esc(pd.texto)}" placeholder="opcional — ex.: o chão range sob vocês" style="flex:1;padding:6px 8px"></div>
       <div class="btnrow" style="margin-top:12px"><button class="b pri" data-act="pdSend">Enviar pedido</button>${PUB.pedido?`<button class="b" data-act="pdCancel">Encerrar pedido</button>`:""}</div>
+      <div class="row" style="border-top:1px solid var(--line);padding-top:10px"><label>Medo</label><button class="b" data-act="fear" data-v="11">Assustador · DIF 11</button><button class="b" data-act="fear" data-v="14">Horror cósmico · 14</button><button class="b" data-act="fear" data-v="17">Impossível · 17</button></div>
+      <div class="small" style="margin-top:4px">Pede Vontade para quem está marcado em “Quem”. Quem falhar ganha Medo sozinho.</div>
       <div class="resp" id="respBox">${respHTML()}</div>
     </div>
     <div class="card"><h3>Rolagens</h3><div class="feed" data-feed="60" style="max-height:560px">${feedHTML(60)}</div></div>
@@ -877,8 +949,13 @@ function renderMesa(){
     ${iniMasterHTML()}
     <div class="card"><h3>Grupo</h3><div class="party" id="party">${partyHTML()}</div>
       <p class="small" style="margin-bottom:0">● verde = jogador conectado agora. Ficha completa nas abas de cada personagem.</p></div>
+    ${fxMasterHTML()}
+    ${supMasterHTML()}
+    <div class="card"><h3>Descanso</h3><div class="btnrow"><button class="b" data-act="rest" data-k="curto">Descanso curto · +1D4 PV</button><button class="b" data-act="rest" data-k="noite">Noite segura · +1D6+Vontade, zera Medo</button></div>
+      <div class="small" style="margin-top:6px">Vale para todo o grupo. Incapacitados estáveis acordam com 1 PV na noite segura. Clique duas vezes para confirmar.</div></div>
     <div class="card"><h3>Link para os jogadores</h3>
-      <p class="small" style="margin-top:0">Mande o endereço desta página. Cada jogador abre, escolhe o personagem e já pode rolar, sem precisar de conta. Tudo fica salvo e sincronizado.</p></div>`;
+      <p class="small" style="margin-top:0">Mande o endereço desta página. Cada jogador abre, escolhe o personagem e já pode rolar, sem precisar de conta. Tudo fica salvo e sincronizado.</p></div>
+  </div></div>`;
 }
 
 /* ---------- render: master sheet / npcs (reused) ---------- */
@@ -931,7 +1008,7 @@ function renderNPCs(){
       <div class="btnrow">${c.hp==null?`<button class="b" data-act="nsethp" data-i="${i}">Definir PV</button>`:""}<button class="b" data-act="ndel" data-i="${i}">Remover</button></div></div></div>`}).join("");
   const rows=PRIV.enemies.map((e,i)=>`<tr class="${e.hp<=0?"dead":""}"><td><input class="en" type="text" data-etxt="nome" data-i="${i}" value="${esc(e.nome)}"></td><td>+${e.atq}</td><td>${e.def}</td><td>${esc(e.dano)}</td>
     <td><b style="font-family:Bebas Neue;font-size:20px">${e.hp}</b>/${e.hpMax}<span class="minibar"><i style="width:${clamp(e.hp/e.hpMax*100,0,100)}%"></i></span></td>
-    <td><div class="btnrow"><input type="number" id="eamt-${i}" placeholder="0" style="width:46px"><button class="b dmg" data-act="edano" data-i="${i}">Dano</button><button class="b dmg" data-act="ehp" data-i="${i}" data-v="-1">−1</button><button class="b heal" data-act="ehp" data-i="${i}" data-v="1">+1</button><button class="b" data-act="eatk" data-i="${i}">Atacar</button><button class="b" data-act="edmg" data-i="${i}">Dano ${esc(e.dano.split("/")[0])}</button><button class="b" data-act="edel" data-i="${i}">✕</button></div></td><td class="small">${esc(e.nota||"")}</td></tr>`).join("");
+    <td><div class="btnrow"><input type="number" id="eamt-${i}" placeholder="0" style="width:46px"><button class="b dmg" data-act="edano" data-i="${i}">Dano</button><button class="b dmg" data-act="ehp" data-i="${i}" data-v="-1">−1</button><button class="b heal" data-act="ehp" data-i="${i}" data-v="1">+1</button><select data-ealvo="${i}" title="alvo">${PCS.filter(p=>pcState(PUB.pcs[p.id])!=="dead").map(p=>`<option value="${p.id}" ${PRIV.lastAlvo===p.id?"selected":""}>${p.nome}</option>`).join("")}</select><button class="b pri" data-act="eatkT" data-i="${i}">Atacar</button><button class="b" data-act="edmg" data-i="${i}">Dano ${esc(e.dano.split("/")[0])}</button><button class="b" data-act="edel" data-i="${i}">✕</button></div></td><td class="small">${esc(e.nota||"")}</td></tr>`).join("");
   return`<div class="sec-title" style="margin-top:0"><h2>Combate</h2><span class="small">Ataque e dano dos inimigos usam a opção “secretas” da caixa de dados.</span></div>
   <div class="card"><div class="btnrow" style="margin-bottom:12px">${Object.entries(ENEMIES).map(([k,e])=>`<button class="b" data-act="eadd" data-k="${k}">+ ${e.nome}</button>`).join("")}</div>
   ${PRIV.enemies.length?`<div class="tablewrap"><table><thead><tr><th>Inimigo</th><th>Atq</th><th>Def</th><th>Dano</th><th>PV</th><th></th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -1125,7 +1202,7 @@ function renderView(){
   if(role==="mestre"&&unlocked){
     $("#tray").classList.remove("hidden");
     const p=PCMAP[PRIV.tab];
-    v.innerHTML=p?renderPC(p):PRIV.tab==="npcs"?renderNPCs():PRIV.tab==="regras"?RULES:renderMesa();
+    v.innerHTML=p?renderPC(p):PRIV.tab==="npcs"?renderNPCs():PRIV.tab==="regras"?RULES:PRIV.tab==="pistas"?renderPistasMaster():PRIV.tab==="diario"?renderDiario():renderMesa();
   }else{
     $("#tray").classList.add("hidden");
     v.innerHTML=role==="jogador"&&myPc?renderPlayer():renderLanding();
@@ -1134,7 +1211,7 @@ function renderView(){
 function renderAll(){renderMeta();renderTabs();renderView()}
 
 /* ---------- master helpers ---------- */
-function setHp(c,v){const b=c.hp;c.hp=clamp(v,0,c.hpMax);if(c.hp>0){c.falhas=0;c.estavel=false}if(b>0&&c.hp<=0){c.estavel=false;toast("Incapacitado!")}}
+function setHp(c,v){const b=c.hp;c.hp=clamp(v,0,c.hpMax);if(c.hp>0){c.falhas=0;c.estavel=false}if(b>0&&c.hp<=0){c.estavel=false;toast("Incapacitado!");diary(`${pcNameOf(c)} caiu`,"queda")}}
 function masterRoll(label,n,f,bonus,extra){
   const raw=[];for(let i=0;i<n;i++)raw.push(d(f));const mod=bonus||0;const tot=raw.reduce((a,b)=>a+b,0)+mod;
   const secret=$("#mSecret").checked;
@@ -1180,7 +1257,7 @@ document.querySelectorAll("[data-mdie]").forEach(b=>b.onclick=()=>{const f=Numbe
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-act],[data-pick],[data-tab],[data-ptab],[data-pd]");if(!t)return;
-  if(t.dataset.pick){myPc=t.dataset.pick;role="jogador";lastResult=null;updateOnline();renderAll();window.scrollTo({top:0});return}
+  if(t.dataset.pick){myPc=t.dataset.pick;role="jogador";ls("us-last-pc",myPc);lastResult=null;Object.keys(PISTAS).forEach(k=>seenPistas.add(k));ls("us-seen-pistas",[...seenPistas]);updateOnline();renderAll();window.scrollTo({top:0});if(soundOn())audio();return}
   if(t.dataset.ptab){ss("us-ptab",t.dataset.ptab);renderTabs();renderView();return}
   if(t.dataset.tab){PRIV.tab=t.dataset.tab;savePriv();renderTabs();renderView();window.scrollTo({top:0});return}
   if(t.dataset.pd){const k=t.dataset.pd,v=t.dataset.v;
@@ -1195,8 +1272,10 @@ document.addEventListener("click",e=>{
     case"trocar":role=null;myPc=null;lastResult=null;updateOnline();renderAll();return;
     case"iniRoll":rollIni();renderView();window.scrollTo({top:0,behavior:"smooth"});return;
     case"abrirMestre":openPin();return;
+    case"som":ls("us-sound",!soundOn());if(soundOn()){audio();sfxDice()}renderMeta();return;
+    case"pistaOpen":{const src=t.dataset.src==="m"?MPISTAS:PISTAS;const x=src[t.dataset.k];if(x)showPista(x);return}
     case"sairMestre":unlocked=false;role=null;if(fauth)fauth.signOut().catch(()=>{});if(fdb)fdb.ref("mestre").off();updateOnline();renderAll();return;
-    case"backup":$("#bkText").value=JSON.stringify({pub:PUB,priv:Object.assign({},PRIV,{pinHash:undefined})});$("#bkMsg").textContent="";$("#bkModal").classList.add("on");return;
+    case"backup":$("#bkText").value=JSON.stringify({pub:PUB,priv:Object.assign({},PRIV,{pinHash:undefined,done:undefined})});$("#bkMsg").textContent="";$("#bkList").innerHTML=backupsHTML();$("#bkModal").classList.add("on");return;
     /* player */
     case"test":rollTest(t.dataset.attr);window.scrollTo({top:0,behavior:"smooth"});return;
     case"pedRoll":rollTest(PUB.pedido.attr);return;
@@ -1210,14 +1289,22 @@ document.addEventListener("click",e=>{
     case"dmg":rollDamage(weapons(P)[t.dataset.w]);renderView();window.scrollTo({top:0,behavior:"smooth"});return;
   }
   if(!(role==="mestre"&&unlocked))return;
+  if(a==="undo"){doUndo();return}
+  if(["diarySess","diaryCopy","diaryAdd","diaryDel","pistaSave","pistaReveal","pistaHide","pistaDel","fxSend"].includes(a)){qolMaster(a,t,e);return}
+  if((a==="rest")&&t.dataset.arm!=="1"){t.dataset.arm="1";const old=t.textContent;t.textContent="Clique de novo para confirmar";setTimeout(()=>{t.dataset.arm="";t.textContent=old},2500);return}
+  const __b=snap();setTimeout(()=>pushUndo(__b),0);
   switch(a){
+    case"sup":{const k=t.dataset.k;PUB.sup[k]=Math.max(0,(PUB.sup[k]||0)+v);savePub();renderView();return}
+    case"rest":rest(t.dataset.k);renderAll();return;
+    case"fear":sendFear(v);renderView();return;
+    case"eatkT":{const i=t.dataset.i,sel=document.querySelector(`[data-ealvo="${i}"]`);if(!sel)return;PRIV.lastAlvo=sel.value;enemyAttack(Number(i),sel.value);renderAll();return}
     case"ruido":PUB.ruido=v;if(v===3)toast("Ruído 3: infectados se aproximam (1D4 comuns).");if(v===5)toast("Ruído 5: HORDA.");savePub();renderMeta();return;
     case"pdSend":{const dif=$("#pdDif").value===""?null:Number($("#pdDif").value);const show=$("#pdShow").checked;const txt=$("#pdTxt").value.trim();
       pd.dif=dif===null?"":dif;pd.show=show;pd.texto=txt;
       const pid="p"+Date.now().toString(36);PUB.pedido={id:pid,attr:pd.attr,alvos:pd.alvos,dif:show?dif:null,texto:txt,at:Date.now()};
       if(dif!==null)PRIV.difs[pid]=dif;savePub();savePriv();toast("Pedido enviado.");renderView();return}
     case"pdCancel":PUB.pedido=null;savePub();renderView();return;
-    case"iniStart":{PUB.ini={ativa:true,rodada:1,turno:0,lista:[],inicio:Date.now(),comecou:false};iniRollEnemies();savePub();renderView();toast("Combate iniciado: jogadores, rolem iniciativa!");return}
+    case"iniStart":{PUB.ini={ativa:true,rodada:1,turno:0,lista:[],inicio:Date.now(),comecou:false};diary(`Combate iniciado${PRIV.enemies.filter(x=>x.hp>0).length?` contra ${PRIV.enemies.filter(x=>x.hp>0).map(x=>x.nome).join(", ")}`:""}`,"combate");iniRollEnemies();savePub();renderView();toast("Combate iniciado: jogadores, rolem iniciativa!");return}
     case"iniEnemies":iniRollEnemies();savePub();renderView();return;
     case"iniNext":{const I=PUB.ini;if(!I.lista.length)return;if(!I.comecou){I.comecou=true;}I.turno++;if(I.turno>=I.lista.length){I.turno=0;I.rodada++;toast("Rodada "+I.rodada)}savePub();renderView();return}
     case"iniPrev":{const I=PUB.ini;if(!I.lista.length)return;I.turno--;if(I.turno<0){if(I.rodada>1){I.rodada--;I.turno=I.lista.length-1}else I.turno=0}savePub();renderView();return}
@@ -1225,7 +1312,7 @@ document.addEventListener("click",e=>{
     case"iniDel":{e.stopPropagation();const I=PUB.ini,i=Number(t.dataset.i);I.lista.splice(i,1);if(I.turno>=I.lista.length)I.turno=0;else if(i<I.turno)I.turno--;savePub();renderView();return}
     case"iniAdd":{const nome=($("#iniNome").value||"").trim()||"Participante";const m=Number($("#iniMod").value)||0;const r=d(20);
       PUB.ini.lista.push({key:"x:"+nome+":"+Date.now(),nome,pc:null,valor:r+m,agil:0});sortIni();savePub();renderView();toast(`${nome}: ${r}+${m} = ${r+m}`);return}
-    case"iniEnd":PUB.ini={ativa:false,rodada:1,turno:0,lista:[],inicio:0};savePub();renderView();return;
+    case"iniEnd":diary(`Combate encerrado na rodada ${PUB.ini.rodada}`,"combate");PUB.ini={ativa:false,rodada:1,turno:0,lista:[],inicio:0};savePub();renderView();return;
     case"hp":setHp(c,c.hp+v);break;
     case"dano":{const n=Number($("#amt-"+id).value)||0;if(!n)return;
       if(c.hp<=0){c.falhas=clamp(c.falhas+1,0,3);toast("Dano em incapacitado: +1 falha")}
@@ -1234,7 +1321,7 @@ document.addEventListener("click",e=>{
     case"medo":c.medo=v;if(v===4)toast("Ruptura: anote um Trauma; o Medo volta a 2.");break;
     case"infec":c.infec=v;break;
     case"feridas":c.feridas=v;break;
-    case"falhas":c.falhas=v;if(v>=3)toast("3 falhas: o personagem morreu.");break;
+    case"falhas":c.falhas=v;if(v>=3){toast("3 falhas: o personagem morreu.");diary(`${pcNameOf(c)} morreu`,"morte")}break;
     case"estavel":c.estavel=!c.estavel;if(c.estavel&&c.feridas<3)c.feridas++;break;
     case"mun":c.mun=Math.max(0,c.mun+v);break;
     case"kit":c.kit=Math.max(0,c.kit+v);break;
@@ -1266,7 +1353,7 @@ document.addEventListener("change",e=>{
   const t=e.target,dd=t.dataset;if(!(role==="mestre"&&unlocked))return;
   if(dd.num){const c=PUB.pcs[dd.id];let v=Number(t.value);if(isNaN(v))return;if(dd.num==="hpMax"){v=Math.max(1,v);c.hpMax=v;if(c.hp>v)c.hp=v}else c[dd.num]=v;savePub();renderTabs();renderView();return}
   if(dd.nnum){const n=PRIV.npcs[dd.i];n.hpMax=Math.max(1,Number(t.value)||1);if(n.hp>n.hpMax)n.hp=n.hpMax;savePriv();renderView();return}
-  if(t.id==="sessao"){PUB.sessao=Math.max(1,Number(t.value)||1);savePub()}
+  if(t.id==="sessao"){const ns=Math.max(1,Number(t.value)||1);if(ns!==PUB.sessao){PUB.sessao=ns;savePub();diary(`Início da sessão ${ns}`,"auto");setTimeout(()=>autoBackup(true),800)}}
   if(t.id==="hora"){PUB.hora=t.value;savePub();if(t.value.trim()==="03:17")toast("03:17.")}
   if(t.id==="pdDif")pd.dif=t.value;if(t.id==="pdShow")pd.show=t.checked;
 });
@@ -1276,7 +1363,228 @@ $("#bkRestore").onclick=()=>{try{const o=JSON.parse($("#bkText").value);if(o.pub
 let arm=false;
 $("#bkReset").onclick=()=>{if(!arm){arm=true;$("#bkReset").textContent="Clique de novo p/ confirmar";setTimeout(()=>{arm=false;$("#bkReset").textContent="Resetar fichas"},3000);return}
   const pin=PRIV.pinHash,tab=PRIV.tab;PUB=pubDefaults();PRIV=privDefaults();PRIV.pinHash=pin;PRIV.tab=tab;savePub();savePriv();renderAll();arm=false;$("#bkReset").textContent="Resetar fichas";$("#bkMsg").textContent="Fichas voltaram ao início."};
-$("#bkClear").onclick=()=>{LOG=[];PRIV.secret=[];myRolls=[];pushPresence();saveLog();savePriv();renderFeeds();$("#bkMsg").textContent="Histórico de rolagens limpo."};
+$("#bkClear").onclick=()=>{LOG=[];PRIV.secret=[];myRolls=[];if(fdb)fdb.ref("rolagens").remove().catch(()=>{});saveLog();savePriv();renderFeeds();$("#bkMsg").textContent="Histórico de rolagens limpo."};
+async function qolMaster(a,t,e){
+  switch(a){
+    case"diarySess":diarySess=Number(t.dataset.v);renderView();return;
+    case"diaryAdd":{const v=$("#diaryIn").value.trim();if(!v){toast("Escreva algo primeiro.");return}diary(v,"nota");renderView();return}
+    case"diaryDel":{const at=Number(t.dataset.at);PRIV.diario=PRIV.diario.filter(x=>!(x.at===at&&x.k==="nota"));savePriv();renderView();return}
+    case"diaryCopy":{const s=diarySess??PUB.sessao;const txt=diaryText(s);if(!txt){toast("Nada para copiar nesta sessão.");return}try{await navigator.clipboard.writeText(txt);toast("Resumo copiado.")}catch(err){$("#bkText").value=txt;$("#bkMsg").textContent="Copie o resumo abaixo (Ctrl+C).";$("#bkList").innerHTML="";$("#bkModal").classList.add("on")}return}
+    case"pistaSave":{const ti=$("#pnT").value.trim(),tx=$("#pnX").value.trim();if(!ti&&!tx&&!pendingImg){toast("Preencha um título, texto ou imagem.");return}
+      const k="pi"+Date.now().toString(36);await pistaWrite("mestre/pistas/"+k,clean({titulo:ti||"Sem título",texto:tx,img:pendingImg||null,at:Date.now()}));pendingImg=null;toast("Pista salva como rascunho.");if(!LOCAL())setTimeout(renderView,300);return}
+    case"pistaReveal":{const k=t.dataset.k,x=MPISTAS[k];if(!x)return;const sel=document.querySelector(`[data-pistaalvo="${k}"]`);const alvo=sel?sel.value:"todos";
+      await pistaWrite("publico/pistas/"+k,clean({titulo:x.titulo,texto:x.texto||"",img:x.img||null,alvos:alvo==="todos"?"todos":[alvo],at:Date.now()}));
+      diary(`Pista revelada: “${x.titulo}” (${alvo==="todos"?"todos":PCMAP[alvo].nome})`,"pista");toast("Pista revelada.");return}
+    case"pistaHide":await pistaWrite("publico/pistas/"+t.dataset.k,null);toast("Pista ocultada.");return;
+    case"pistaDel":{if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="Confirmar?";setTimeout(()=>{t.dataset.arm="";t.textContent="Apagar"},2500);return}
+      await pistaWrite("publico/pistas/"+t.dataset.k,null);await pistaWrite("mestre/pistas/"+t.dataset.k,null);toast("Pista apagada.");return}
+    case"fxSend":sendFx(t.dataset.k);return;
+  }
+}
+
+/* ---------- QoL: sound ---------- */
+let AC=null;
+function soundOn(){const v=ls("us-sound");return v===null?true:!!v}
+function audio(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC}catch(e){return null}}
+document.addEventListener("pointerdown",()=>{if(soundOn())audio()},{once:true});
+function noiseBuf(ac,sec){const b=ac.createBuffer(1,Math.floor(ac.sampleRate*sec),ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b}
+function clack(ac,t,vol){const s=ac.createBufferSource();s.buffer=noiseBuf(ac,.05);const f=ac.createBiquadFilter();f.type="bandpass";f.frequency.value=1800+Math.random()*1800;f.Q.value=3;const g=ac.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);s.connect(f).connect(g).connect(ac.destination);s.start(t)}
+function sfxDice(){if(!soundOn())return;const ac=audio();if(!ac)return;const t=ac.currentTime;[0,.09,.17,.26,.36,.5,.66,.85].forEach((o,i)=>clack(ac,t+o,.35*(1-i/10)))}
+function sfxStatic(sec,vol){if(!soundOn())return;const ac=audio();if(!ac)return;const s=ac.createBufferSource();s.buffer=noiseBuf(ac,sec);const f=ac.createBiquadFilter();f.type="highpass";f.frequency.value=900;const g=ac.createGain();const t=ac.currentTime;g.gain.setValueAtTime(vol||.25,t);g.gain.linearRampToValueAtTime(0,t+sec);s.connect(f).connect(g).connect(ac.destination);s.start(t)}
+function sfxDrone(sec){if(!soundOn())return;const ac=audio();if(!ac)return;const t=ac.currentTime;[55,58.3].forEach(fr=>{const o=ac.createOscillator();o.type="sawtooth";o.frequency.value=fr;const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=300;const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.12,t+.6);g.gain.linearRampToValueAtTime(0,t+sec);o.connect(lp).connect(g).connect(ac.destination);o.start(t);o.stop(t+sec)})}
+function sfxBeat(n){if(!soundOn())return;const ac=audio();if(!ac)return;const t=ac.currentTime;for(let i=0;i<n;i++){[0,.18].forEach(o=>{const os=ac.createOscillator();os.frequency.value=55;const g=ac.createGain();const tt=t+i*.9+o;g.gain.setValueAtTime(.5,tt);g.gain.exponentialRampToValueAtTime(.001,tt+.16);os.connect(g).connect(ac.destination);os.start(tt);os.stop(tt+.2)})}}
+
+/* ---------- QoL: notifications of others' rolls ---------- */
+const loadAt=Date.now();
+function note(html,color){const box=$("#notes");if(!box)return;const el=document.createElement("div");el.className="note";el.style.borderLeftColor=color||"#777";el.innerHTML=html;box.prepend(el);
+  while(box.children.length>4)box.lastChild.remove();setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),400)},3800)}
+function notifyRoll(r){
+  if(!r||r.at<loadAt-2000||String(r.id).startsWith(clientId+"-")||r.secret)return;
+  if(role==="jogador"&&r.pc===myPc)return;
+  if(!role)return;
+  const oc=r.dice==="D20"&&r.kind!=="iniciativa"&&r.kind!=="morte"?outcome(r.total,r.dif,r.nat):null;
+  note(`<b style="color:${whoColor(r)}">${esc(whoName(r))}</b> rolou <b class="nn">${r.total}</b> · ${esc(r.label)}${oc&&(r.nat===20||r.nat===1)?` <span class="${oc[1]}">${oc[0]}</span>`:""}`,whoColor(r));
+}
+
+/* ---------- QoL: diary ---------- */
+function pcNameOf(c){const id=Object.keys(PUB.pcs).find(k=>PUB.pcs[k]===c);return id&&PCMAP[id]?PCMAP[id].nome:"?"}
+function diary(t,k){if(!(role==="mestre"&&unlocked)&&!LOCAL())return;if(!Array.isArray(PRIV.diario))PRIV.diario=[];PRIV.diario.push({at:Date.now(),s:PUB.sessao,t:String(t).slice(0,400),k:k||"auto"});if(PRIV.diario.length>800)PRIV.diario=PRIV.diario.slice(-800);savePriv()}
+function diaryText(s){const es=(PRIV.diario||[]).filter(x=>x.s===s);if(!es.length)return"";return`SESSÃO ${s} — resumo\n`+es.map(x=>`[${hhmm(x.at)}] ${x.k==="nota"?"📝 ":""}${x.t}`).join("\n")}
+let diarySess=null;
+function renderDiario(){
+  const all=PRIV.diario||[];const sess=[...new Set(all.map(x=>x.s))].sort((a,b)=>b-a);if(!sess.includes(PUB.sessao))sess.unshift(PUB.sessao);
+  const s=diarySess??PUB.sessao;const es=all.filter(x=>x.s===s).slice().reverse();
+  const ico={auto:"•",nota:"📝",combate:"⚔",queda:"✚",morte:"☠",pista:"🔎",efeito:"⚡",critico:"★",descanso:"☾",medo:"!"};
+  return`<div class="wrap-narrow stack"><div class="card"><h3>Diário da sessão</h3>
+    <div class="row" style="margin-top:0"><label>Sessão</label><div class="sel">${sess.map(x=>`<button class="${x===s?"on":""}" data-act="diarySess" data-v="${x}">${x}</button>`).join("")}</div></div>
+    <div class="row"><input type="text" id="diaryIn" placeholder="Anotar algo — ex.: o grupo decidiu poupar o Lucas" style="flex:1;padding:7px 9px"><button class="b pri" data-act="diaryAdd">Anotar</button></div>
+    <div class="btnrow" style="margin-top:10px"><button class="b" data-act="diaryCopy">Copiar resumo da sessão ${s}</button><span class="small">cole no seu documento mestre</span></div></div>
+    <div class="card">${es.length?es.map((x,i)=>`<div class="dl k-${x.k}"><span class="di">${ico[x.k]||"•"}</span><span class="dt">${hhmm(x.at)}</span><span class="dx">${esc(x.t)}</span>${x.k==="nota"?`<button class="clr" data-act="diaryDel" data-at="${x.at}" title="apagar">✕</button>`:""}</div>`).join(""):`<div class="small">Nada registrado nesta sessão ainda. Quedas, mortes, críticos, combates, pistas e efeitos entram aqui sozinhos.</div>`}</div></div>`;
+}
+
+/* ---------- QoL: undo ---------- */
+let UNDO=[];
+function privCore(p){const o=Object.assign({},p);delete o.done;delete o.diario;delete o.secret;delete o.tab;return o}
+function snap(){return{p:JSON.stringify(PUB),v:JSON.stringify(privCore(PRIV))}}
+function pushUndo(before){const now=snap();if(now.p===before.p&&now.v===before.v)return;UNDO.push(before);if(UNDO.length>30)UNDO.shift();renderMeta()}
+function doUndo(){const s=UNDO.pop();if(!s){toast("Nada para desfazer.");return}
+  PUB=mergePub(JSON.parse(s.p));const keep={done:PRIV.done,diario:PRIV.diario,secret:PRIV.secret,tab:PRIV.tab,pinHash:PRIV.pinHash};PRIV=mergePriv(Object.assign(JSON.parse(s.v),keep));
+  savePub();savePriv();renderAll();toast("Desfeito.")}
+
+/* ---------- QoL: supplies ---------- */
+const SUP=[["comida","Comida","porções"],["agua","Água","litros"],["remedios","Remédios","doses"],["combustivel","Combustível","litros"],["baterias","Baterias","unid."]];
+function supMasterHTML(){return`<div class="card"><h3>Suprimentos do grupo</h3><div class="supg">${SUP.map(([k,n,u])=>`<div class="sup"><div class="sn">${n}<small>${u}</small></div><div class="counter"><button class="b" data-act="sup" data-k="${k}" data-v="-1">−</button><span class="v">${PUB.sup[k]||0}</span><button class="b" data-act="sup" data-k="${k}" data-v="1">+</button></div></div>`).join("")}</div></div>`}
+function supPlayerHTML(){return`<div class="card"><h3>Suprimentos do grupo</h3><div class="supg ro">${SUP.map(([k,n,u])=>`<div class="sup"><div class="sn">${n}<small>${u}</small></div><span class="v ${(PUB.sup[k]||0)===0?"zero":""}">${PUB.sup[k]||0}</span></div>`).join("")}</div></div>`}
+
+/* ---------- QoL: party view for players ---------- */
+function partyPlayerHTML(){
+  const on=onlinePcs();
+  return`<div class="card"><h3>Grupo</h3><div class="pp">${PCS.filter(p=>p.id!==myPc).map(p=>{const c=PUB.pcs[p.id],st=pcState(c),pct=clamp(c.hp/c.hpMax*100,0,100);
+    return`<div class="ppi" style="--c:${p.cor}"><img src="${IMG[p.id]}" alt=""><div class="ppb"><div class="ppn"><i class="${on.has(p.id)?"on":""}"></i>${p.nome}${st!=="ok"?` <span class="chip r" style="padding:0 6px">${statusLabel(st)[0].split(" — ")[0]}</span>`:""}</div>
+    <div class="hpbar" style="margin-top:3px"><i style="width:${pct}%"></i></div><div class="small">${c.hp}/${c.hpMax} PV</div></div></div>`}).join("")}</div></div>`;
+}
+
+/* ---------- QoL: rest ---------- */
+function rest(kind){
+  const out=[];
+  PCS.forEach(p=>{const c=PUB.pcs[p.id],st=pcState(c);if(st==="dead")return;
+    if(kind==="curto"){if(c.hp>0){const h=d(4);const b=c.hp;c.hp=clamp(c.hp+h,0,c.hpMax);out.push(`${p.nome} +${c.hp-b}`)}}
+    else{if(st==="stab"){c.hp=1;c.estavel=false;c.falhas=0;out.push(`${p.nome} acorda com 1 PV`)}
+      else if(c.hp>0){const h=d(6)+Number(c.vont);const b=c.hp;c.hp=clamp(c.hp+h,0,c.hpMax);out.push(`${p.nome} +${c.hp-b}`)}
+      if(c.medo){c.medo=0}}
+  });
+  const txt=(kind==="curto"?"Descanso curto: ":"Noite segura (Medo zerado): ")+(out.join(", ")||"ninguém recuperou");
+  diary(txt,"descanso");toast(txt);savePub();
+}
+
+/* ---------- QoL: enemy attack with target ---------- */
+const INFECTED=["comum","corredor","estalador","eco"];
+function parseDano(s){const m=String(s||"").match(/(\d*)D(\d+)\s*([+-]\s*\d+)?/i);return m?{n:Number(m[1]||1),f:Number(m[2]),b:m[3]?Number(m[3].replace(/\s/g,"")):0}:null}
+function enemyAttack(i,pcId){
+  const en=PRIV.enemies[i],c=PUB.pcs[pcId],p=PCMAP[pcId];if(!en||!c)return;
+  const r=d(20),tot=r+Number(en.atq),def=10+Number(c.agil);const hit=r===20||(r!==1&&tot>=def);
+  let msg,dmg=0;
+  if(hit){const dn=parseDano(en.dano)||{n:1,f:6,b:0};let raw=0;for(let k=0;k<dn.n;k++)raw+=d(dn.f);if(r===20)raw+=dn.n*dn.f;dmg=Math.max(1,raw+dn.b-Number(c.rd||0));
+    if(c.hp<=0){if(r===20){c.falhas=3;msg=`${en.nome} acerta ${p.nome} caído com um crítico: ${p.nome} morreu`;diary(msg,"morte")}else{c.falhas=clamp(c.falhas+1,0,3);msg=`${en.nome} acerta ${p.nome} caído: +1 falha`;if(c.falhas>=3)diary(`${p.nome} morreu`,"morte")}}
+    else{const b=c.hp;c.hp=clamp(c.hp-dmg,0,c.hpMax);if(c.hp>0){c.falhas=0}
+      msg=`${en.nome} → ${p.nome}: ${r===20?"CRÍTICO, ":""}acertou (${tot} vs Def ${def}), ${dmg} de dano${c.rd?` (colete −${c.rd})`:""}`;
+      if(dmg>=10&&c.feridas<3){c.feridas++;msg+=" + Ferimento Grave"}
+      if(b>0&&c.hp<=0){c.estavel=false;msg+=` — ${p.nome} caiu!`;diary(`${p.nome} caiu (atacado por ${en.nome})`,"queda")}
+      if(INFECTED.includes(en.k))msg+=` · teste de exposição: Força DIF ${en.k==="estalador"||en.k==="eco"?14:11}`}
+  }else msg=`${en.nome} → ${p.nome}: errou (${tot} vs Def ${def})${r===1?" · falha crítica":""}`;
+  const secret=$("#mSecret").checked;
+  const short=hit?`${en.nome} → ${p.nome}: ${r===20?"crítico, ":""}acertou, ${dmg} de dano`:`${en.nome} → ${p.nome}: errou`;
+  const roll=newRoll({who:"Mestre",label:short.slice(0,90),dice:"D20",raw:[r],mod:Number(en.atq),total:tot,nat:r,kind:"mestre",secret});
+  $("#mRes").textContent=tot;$("#mWhy").textContent=msg;
+  emitRoll(roll);toast(msg);if(r===20)diary(msg,"critico");savePub();savePriv();
+}
+
+/* ---------- QoL: fear test ---------- */
+function sendFear(dif){
+  const pid="p"+Date.now().toString(36);
+  PUB.pedido={id:pid,attr:"vont",alvos:pd.alvos,dif:null,texto:"Teste de Medo — algo terrível acontece",at:Date.now(),medo:true};
+  PRIV.difs[pid]=dif;PRIV.medoP=PRIV.medoP||{};PRIV.medoP[pid]=dif;savePub();savePriv();toast(`Teste de Medo enviado (DIF ${dif}).`);diary(`Teste de Medo pedido (DIF ${dif})`,"medo");
+}
+function fearEffect(r){
+  if(!r.pedido||!PRIV.medoP||PRIV.medoP[r.pedido]==null||!PUB.pcs[r.pc])return false;
+  const dif=PRIV.medoP[r.pedido],c=PUB.pcs[r.pc],n=PCMAP[r.pc].nome;
+  if(r.nat===20||(r.nat!==1&&r.total>=dif))return true;
+  const add=r.nat===1?2:1;c.medo=clamp(c.medo+add,0,4);
+  diary(`${n} falhou no teste de Medo: +${add} (Medo ${c.medo})${c.medo>=4?" — RUPTURA":""}`,"medo");if(c.medo>=4)toast(`${n} chegou à Ruptura!`);return true;
+}
+
+/* ---------- QoL: clues (pistas) ---------- */
+let PISTAS={}, MPISTAS={}, seenPistas=new Set(ls("us-seen-pistas")||[]);
+function pistaForMe(x){return x&&(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc)))}
+function pistaList(map,me){return Object.entries(map||{}).map(([k,v])=>Object.assign({_k:k},v)).filter(x=>!me||pistaForMe(x)).sort((a,b)=>(b.at||0)-(a.at||0))}
+function onPistas(map){
+  PISTAS=map||{};
+  if(role==="jogador"&&myPc){pistaList(PISTAS,true).forEach(x=>{if(!seenPistas.has(x._k)&&x.at>loadAt-3000){showPista(x)}seenPistas.add(x._k)});ls("us-seen-pistas",[...seenPistas])}
+  if(role==="jogador"&&(ss("us-ptab")==="pistas"))renderView();else if(role==="jogador")renderTabs();
+  if(role==="mestre"&&unlocked&&PRIV.tab==="pistas")rerender();
+}
+function showPista(x){const m=$("#pistaModal");$("#pmT").textContent=x.titulo||"Pista";$("#pmX").textContent=x.texto||"";
+  const im=$("#pmI");if(x.img){im.src=x.img;im.classList.remove("hidden")}else im.classList.add("hidden");m.classList.add("on");sfxStatic(.6,.15)}
+function pistaCard(x,master){
+  const alvo=x.alvos==="todos"?"todos":Array.isArray(x.alvos)?x.alvos.map(a=>PCMAP[a]?PCMAP[a].nome:a).join(", "):"";
+  return`<div class="pista">${x.img?`<img src="${x.img}" alt="" data-act="pistaOpen" data-k="${x._k}" data-src="${master?"m":"p"}">`:""}<div class="pb"><div class="pt">${esc(x.titulo||"Sem título")}</div>${x.texto?`<div class="px">${esc(x.texto)}</div>`:""}
+    ${master?`<div class="small" style="margin-top:6px">${x.revelada?`Revelada para: ${esc(alvo)}`:"Rascunho — só você vê"}</div>`:""}
+    <div class="btnrow" style="margin-top:8px">${master?(x.revelada?`<button class="b" data-act="pistaHide" data-k="${x._k}">Ocultar dos jogadores</button>`:`<button class="b pri" data-act="pistaReveal" data-k="${x._k}">Revelar</button><select data-pistaalvo="${x._k}"><option value="todos">para todos</option>${PCS.map(p=>`<option value="${p.id}">só ${p.nome}</option>`).join("")}</select>`)+`<button class="b dmg" data-act="pistaDel" data-k="${x._k}">Apagar</button>`
+      :`<button class="b" data-act="pistaOpen" data-k="${x._k}" data-src="p">Abrir</button>`}</div></div></div>`;
+}
+function renderPistasMaster(){
+  const ms=pistaList(MPISTAS).map(x=>Object.assign(x,{revelada:!!PISTAS[x._k],alvos:PISTAS[x._k]?PISTAS[x._k].alvos:null}));
+  return`<div class="wrap-narrow stack"><div class="card"><h3>Nova pista ou documento</h3>
+    <div class="fld" style="margin-top:0"><label>Título</label><input type="text" id="pnT" placeholder="Fotografia antiga" style="width:100%;padding:7px 9px"></div>
+    <div class="fld"><label>Texto (opcional)</label><textarea id="pnX" rows="4" placeholder="No verso, escrito à mão: 017 — 03:17"></textarea></div>
+    <div class="fld"><label>Imagem (opcional)</label><input type="file" id="pnI" accept="image/*"><img id="pnPrev" class="hidden" style="max-width:220px;margin-top:8px;border-radius:8px;border:1px solid var(--line)"></div>
+    <div class="btnrow" style="margin-top:12px"><button class="b pri" data-act="pistaSave">Salvar como rascunho</button><span class="small">Os jogadores só veem depois que você revelar.</span></div></div>
+    ${ms.length?ms.map(x=>pistaCard(x,true)).join(""):`<div class="card small">Nenhuma pista criada ainda.</div>`}</div>`;
+}
+function renderPistasPlayer(){const ps=pistaList(PISTAS,true);return`<div class="wrap-narrow stack">${ps.length?ps.map(x=>pistaCard(x,false)).join(""):`<div class="card small">Nenhuma pista ainda. Quando o mestre revelar documentos, fotos ou registros, eles aparecem aqui.</div>`}</div>`}
+function compressImage(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const max=1000;let w=im.width,h=im.height;if(w>max||h>max){const s=max/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}
+  const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);res(cv.toDataURL("image/jpeg",.78))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+let pendingImg=null;
+document.addEventListener("change",async e=>{if(e.target.id!=="pnI"||!e.target.files[0])return;try{pendingImg=await compressImage(e.target.files[0]);const pv=$("#pnPrev");pv.src=pendingImg;pv.classList.remove("hidden")}catch(err){toast("Não consegui ler essa imagem.")}});
+async function pistaWrite(path,val){
+  if(LOCAL()){const key=path.startsWith("publico")?"us-pistas":"us-mpistas";const k=path.split("/").pop();const m=ls(key)||{};if(val===null)delete m[k];else m[k]=val;ls(key,m);
+    if(key==="us-pistas")onPistas(m);else{MPISTAS=m;rerender()}return}
+  try{if(val===null)await fdb.ref(path).remove();else await fdb.ref(path).set(val)}catch(e){toast("Não consegui salvar a pista: "+(e&&e.code||"erro"))}
+}
+
+/* ---------- QoL: horror effects ---------- */
+const FX=[["estatica","Estática","chiado e chuvisco"],["falha","Falha","a tela treme e distorce"],["radio","Rádio","o rádio liga sozinho"],["0317","03:17","o relógio pisca"],["semrosto","Sem-Rosto","um rosto vazio aparece"],["apagao","Apagão","tudo escurece"]];
+let lastFxId=ls("us-lastfx")||null;
+function fxMasterHTML(){return`<div class="card"><h3>Efeitos de horror</h3>
+  <div class="fxg">${FX.map(([k,n,dd])=>`<button class="fxb" data-act="fxSend" data-k="${k}"><b>${n}</b><span>${dd}</span></button>`).join("")}</div>
+  <div class="row"><label>Texto</label><input type="text" id="fxTxt" placeholder="opcional — ex.: Por que vocês ainda estão separados?" style="flex:1;padding:6px 8px"></div>
+  <div class="small" style="margin-top:6px">Vai para quem estiver marcado em “Quem”, no pedido de teste. O texto aparece no Rádio, no Apagão e no 03:17.</div></div>`}
+function onFx(x){
+  if(!x||!x.id||x.id===lastFxId)return;lastFxId=x.id;ls("us-lastfx",x.id);
+  if(Date.now()-(x.at||0)>20000)return;
+  if(role!=="jogador"||!myPc)return;
+  if(!(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc))))return;
+  playFx(x.tipo,x.texto);
+}
+let fxRunning=null;
+function playFx(tipo,texto){
+  const L=$("#horror");if(!L)return;clearTimeout(fxRunning);L.className="on "+tipo;L.innerHTML="";
+  const end=(ms)=>{fxRunning=setTimeout(()=>{L.className="";L.innerHTML="";document.body.classList.remove("glitch")},ms)};
+  const txt=t=>`<div class="htxt">${esc(t)}</div>`;
+  if(tipo==="estatica"||tipo==="radio"){const cv=document.createElement("canvas");cv.width=160;cv.height=100;L.appendChild(cv);const g=cv.getContext("2d");const t0=Date.now();
+    (function f(){const id=g.createImageData(160,100);for(let i=0;i<id.data.length;i+=4){const v=Math.random()*255;id.data[i]=id.data[i+1]=id.data[i+2]=v;id.data[i+3]=255}g.putImageData(id,0,0);if(Date.now()-t0<(tipo==="radio"?4200:2600)&&L.classList.contains(tipo))requestAnimationFrame(f)})();
+    if(tipo==="radio"){L.insertAdjacentHTML("beforeend",txt(texto||"…se alguém estiver ouvindo…"));sfxStatic(4.2,.22)}else sfxStatic(2.6,.3);end(tipo==="radio"?4400:2700)}
+  else if(tipo==="falha"){document.body.classList.add("glitch");sfxStatic(.35,.25);setTimeout(()=>sfxStatic(.25,.2),700);end(1600)}
+  else if(tipo==="0317"){L.innerHTML=`<div class="clock">03:17</div>${texto?txt(texto):""}`;sfxBeat(4);end(4200)}
+  else if(tipo==="semrosto"){L.innerHTML=`<img src="${IMG.semrosto}" alt="">`;sfxStatic(.25,.35);end(1300)}
+  else if(tipo==="apagao"){L.innerHTML=texto?txt(texto):"";sfxDrone(5);end(5200)}
+}
+function sendFx(tipo){
+  const texto=($("#fxTxt")&&$("#fxTxt").value.trim())||"";
+  const x={id:"f"+Date.now().toString(36),tipo,alvos:pd.alvos,texto,at:Date.now()};
+  if(LOCAL()){toast("Modo local: mostrando aqui mesmo.");playFx(tipo,texto);return}
+  fdb.ref("publico/fx").set(clean(x)).then(()=>toast(`Efeito “${FX.find(f=>f[0]===tipo)[1]}” enviado.`)).catch(e=>toast("Não enviou: "+(e&&e.code||"erro")));
+  diary(`Efeito de horror: ${FX.find(f=>f[0]===tipo)[1]}${texto?` — “${texto}”`:""} (${pd.alvos==="todos"?"todos":pd.alvos.map(a=>PCMAP[a].nome).join(", ")})`,"efeito");
+}
+
+/* ---------- QoL: automatic backups ---------- */
+let BACKUPS={};
+function autoBackup(force){
+  if(LOCAL()||!fdb||!(role==="mestre"&&unlocked))return;
+  const list=Object.entries(BACKUPS).sort((a,b)=>(b[1].at||0)-(a[1].at||0));const last=list[0]&&list[0][1];
+  if(!force&&last&&last.sessao===PUB.sessao&&Date.now()-last.at<6*3600e3)return;
+  const k="b"+Date.now();fdb.ref("mestre/backups/"+k).set({at:Date.now(),sessao:PUB.sessao,pub:JSON.stringify(PUB),priv:JSON.stringify(Object.assign({},PRIV,{done:undefined}))}).catch(()=>{});
+  list.slice(9).forEach(([kk])=>fdb.ref("mestre/backups/"+kk).remove().catch(()=>{}));
+}
+function backupsHTML(){const list=Object.entries(BACKUPS).sort((a,b)=>(b[1].at||0)-(a[1].at||0));
+  if(LOCAL())return`<p class="small">Backups automáticos funcionam quando a mesa está conectada ao Firebase.</p>`;
+  return list.length?`<div class="bkl">${list.map(([k,b])=>`<div class="r"><span>Sessão ${b.sessao} · ${new Date(b.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span><button class="b" data-bk="${k}">Restaurar este</button></div>`).join("")}</div>`:`<p class="small">Ainda não há backups automáticos. Um é feito quando você entra como mestre e a cada nova sessão.</p>`}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-bk]");if(!b)return;const bk=BACKUPS[b.dataset.bk];if(!bk)return;
+  if(b.dataset.arm!=="1"){b.dataset.arm="1";b.textContent="Confirmar?";setTimeout(()=>{b.dataset.arm="";b.textContent="Restaurar este"},2500);return}
+  try{const before=snap();PUB=mergePub(JSON.parse(bk.pub));const keep={done:PRIV.done,pinHash:PRIV.pinHash,tab:PRIV.tab};PRIV=mergePriv(Object.assign(JSON.parse(bk.priv),keep));UNDO.push(before);savePub();savePriv();renderAll();$("#bkMsg").textContent="Backup restaurado. Se precisar, use Desfazer."}catch(err){$("#bkMsg").textContent="Backup inválido."}});
+
+/* ---------- QoL: PWA ---------- */
+if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 
 /* ---------- boot ---------- */
 renderAll();
