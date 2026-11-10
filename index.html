@@ -277,6 +277,30 @@ tr.dead td{opacity:.4;text-decoration:line-through}
 .modal .box.wide{max-width:560px}
 .pin{font-size:28px;letter-spacing:.4em;text-align:center;width:100%;padding:10px;margin:10px 0}
 .modal textarea{min-height:150px;font-family:monospace;font-size:11px}
+#fx{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(5,5,7,.86);cursor:pointer;padding:20px;text-align:center}
+#fx.on{display:flex}
+#fx .die{width:180px;height:180px;position:relative}
+#fx .die svg{width:100%;height:100%;overflow:visible}
+#fx.rolling .die svg{animation:fxspin .95s cubic-bezier(.15,.75,.3,1) both}
+#fx.rolling .die{animation:fxshake .95s ease-out both}
+@keyframes fxspin{0%{transform:rotate(-720deg) scale(.35)}65%{transform:rotate(25deg) scale(1.12)}82%{transform:rotate(-8deg) scale(.97)}100%{transform:rotate(0) scale(1)}}
+@keyframes fxshake{0%{transform:translate(-120px,60px)}40%{transform:translate(30px,-25px)}70%{transform:translate(-8px,6px)}100%{transform:translate(0,0)}}
+#fx .face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Bebas Neue",sans-serif;font-size:64px;color:#fff;letter-spacing:.02em;pointer-events:none}
+#fx .face.d4{padding-top:34px;font-size:52px}
+#fx.landed .face{animation:fxpop .35s ease-out}
+@keyframes fxpop{0%{transform:scale(1.5)}100%{transform:scale(1)}}
+#fx.crit .die svg .body{stroke:#4caf6a!important}
+#fx.crit .face{color:#7fe39a}
+#fx.fail .die svg .body{stroke:#d64541!important}
+#fx.fail .face{color:#ff7b74}
+#fx .who{font-family:"Bebas Neue";font-size:20px;letter-spacing:.08em;margin-top:6px}
+#fx .lbl{font-size:14px;color:#c9c6c0}
+#fx .tot{font-family:"Bebas Neue";font-size:54px;line-height:1;color:#fff;opacity:0;transition:opacity .2s}
+#fx.landed .tot{opacity:1}
+#fx .oc{font-weight:700;font-size:15px;opacity:0;transition:opacity .2s}
+#fx.landed .oc{opacity:1}
+#fx .skip{font-size:11px;color:#777;margin-top:8px}
+@media (prefers-reduced-motion:reduce){#fx.rolling .die svg,#fx.rolling .die{animation:none}}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 </style>
@@ -327,6 +351,7 @@ tr.dead td{opacity:.4;text-decoration:line-through}
     <p class="small" id="bkMsg" style="margin-bottom:0"></p>
   </div>
 </div>
+<div id="fx" aria-live="polite"><div class="die"><svg viewBox="0 0 100 100" id="fxSvg"></svg><div class="face" id="fxFace"></div></div><div class="who" id="fxWho"></div><div class="lbl" id="fxLbl"></div><div class="tot" id="fxTot"></div><div class="oc" id="fxOc"></div><div class="skip">toque para fechar</div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -521,8 +546,46 @@ function bootLocal(){
 
 /* ---------- rolls ---------- */
 function newRoll(o){return Object.assign({id:clientId+"-"+(++rollSeq),at:Date.now()},o)}
+const DIE_SHAPES={
+  4:'<polygon class="body" points="50,6 95,88 5,88"/><path d="M50 6 L50 88" class="ln"/>',
+  6:'<rect class="body" x="10" y="10" width="80" height="80" rx="10"/>',
+  8:'<polygon class="body" points="50,3 95,50 50,97 5,50"/><path d="M5 50 L95 50" class="ln"/>',
+  10:'<polygon class="body" points="50,3 94,40 50,97 6,40"/><path d="M6 40 L30 55 L50 97 M94 40 L70 55 L50 97 M30 55 L70 55" class="ln"/>',
+  12:'<polygon class="body" points="50,4 96,37 78,93 22,93 4,37"/><polygon class="ln" points="50,22 74,40 65,70 35,70 26,40"/>',
+  20:'<polygon class="body" points="50,2 94,26 94,74 50,98 6,74 6,26"/><path d="M50 18 L80 70 L20 70 Z M50 2 L50 18 M94 26 L80 70 M6 26 L20 70 M94 74 L80 70 M6 74 L20 70 M50 98 L80 70 M50 98 L20 70 M6 26 L50 18 M94 26 L50 18" class="ln"/>'
+};
+let fxTimers=[];
+function diceFx(r){
+  const fx=document.getElementById("fx");if(!fx)return;
+  fxTimers.forEach(clearTimeout);fxTimers=[];
+  const m=String(r.dice||"").match(/(\d*)D(\d+)/i);const n=m?Number(m[1]||1):1;let f=m?Number(m[2]):20;
+  const shapeF=DIE_SHAPES[f]?f:(f===100?10:20);
+  const col=r.pc&&PCMAP[r.pc]?PCMAP[r.pc].cor:"#c4302b";
+  document.getElementById("fxSvg").innerHTML=`<g style="--dc:${col}">${DIE_SHAPES[shapeF].replace(/class="body"/,`class="body" fill="#141418" stroke="${col}" stroke-width="3.5" stroke-linejoin="round"`).replace(/class="ln"/g,`class="ln" fill="none" stroke="${col}" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"`)}</g>`;
+  const face=document.getElementById("fxFace");face.className="face"+(shapeF===4?" d4":"");
+  const single=n===1;const nat=single?(r.raw||[])[0]:null;
+  const finalFace=single?nat:r.total;
+  document.getElementById("fxWho").textContent=whoName(r);document.getElementById("fxWho").style.color=col;
+  document.getElementById("fxLbl").textContent=r.label+(r.secret?" · secreta":"");
+  const showTot=!single||r.mod;
+  document.getElementById("fxTot").textContent=showTot?`= ${r.total}`:"";
+  let oc=null;
+  if(r.kind==="morte")oc=r.nat===20?["Volta com 1 PV!","oc-ex"]:r.nat===1?["2 falhas","oc-f"]:r.total>=10?["Resiste","oc-ok"]:["1 falha","oc-f"];
+  else if(f===20&&single&&r.kind!=="iniciativa")oc=outcome(r.total,knownDif(r),r.nat);
+  const ocEl=document.getElementById("fxOc");ocEl.textContent=oc?oc[0]:"";ocEl.className="oc "+(oc?oc[1]:"");
+  fx.className="on rolling";
+  const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dur=reduce?250:950;const t0=Date.now();
+  (function tick(){const el=Date.now()-t0;if(el>=dur){face.textContent=finalFace;
+      fx.classList.add("landed");if(f===20&&single&&r.kind!=="iniciativa"){if(nat===20)fx.classList.add("crit");if(nat===1)fx.classList.add("fail")}
+      fxTimers.push(setTimeout(closeFx,1900));return}
+    face.textContent=single?d(f):(n+Math.floor(Math.random()*(n*f-n+1)));
+    fxTimers.push(setTimeout(tick,el<dur*.6?55:el<dur*.85?110:180))})();
+}
+function closeFx(){const fx=document.getElementById("fx");if(fx)fx.className="";fxTimers.forEach(clearTimeout);fxTimers=[]}
+document.getElementById("fx").addEventListener("click",closeFx);
 function emitRoll(r){
-  seenNew.add(r.id);
+  seenNew.add(r.id);diceFx(r);
   if(r.secret){PRIV.secret.unshift(r);PRIV.secret=PRIV.secret.slice(0,60);savePriv();if(role==="mestre")applyEffects(r);renderFeeds();return}
   myRolls.unshift(r);myRolls=myRolls.slice(0,10);
   if(LOCAL()){LOG.unshift(r);LOG=LOG.slice(0,150);ingestOne(r);saveLocal();renderFeeds();return}
