@@ -892,7 +892,7 @@ function renderLanding(){
 function renderPlayer(){
   const p=PCMAP[myPc],c=PUB.pcs[myPc],st=pcState(c),pen=penalties(c);
   const tab=ss("us-ptab")||"jogar";
-  if(tab==="regras")return RULES;
+  if(tab==="regras")return RULES_PLAYER;
   if(tab==="pistas")return renderPistasPlayer();
   if(tab==="mapa")return renderMapPlayer();
   const pct=clamp(c.hp/c.hpMax*100,0,100);
@@ -1243,6 +1243,7 @@ const RULES=`<div class="rules">
 </div>
 `;
 
+const RULES_PLAYER=RULES.replace(/<section id="r-mestre">[\s\S]*?<\/section>/,"").replace('<a href="#r-mestre">Mestre</a>',"");
 /* ---------- main render ---------- */
 function renderView(){
   const v=$("#view");
