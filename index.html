@@ -364,8 +364,13 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .mapwrap{position:relative;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0d1014;touch-action:none;user-select:none}
 .mapbg,.mapbg svg,.mapbg img{position:absolute;inset:0;width:100%;height:100%;display:block}.mapbg img{object-fit:cover}
 .maplayer{position:absolute;inset:0}
+.mapz{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
+.mapwrap.panning{cursor:grabbing!important}
+.mzc{position:absolute;right:8px;top:8px;z-index:8;display:flex;flex-direction:column;gap:4px}
+.mzc button{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);background:rgba(10,12,15,.85);color:#fff;font-size:16px;line-height:1;cursor:pointer;padding:0}
+.mzc button:hover{border-color:#fff}.mzc .mzv{font-size:10px;text-align:center;color:var(--mut);background:rgba(10,12,15,.85);border-radius:4px;padding:1px 0}
 .mapwrap.mode-mark{cursor:crosshair}
-.tk{position:absolute;width:4.2%;min-width:30px;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:3px solid var(--c);background:#111;box-shadow:0 2px 8px rgba(0,0,0,.7);z-index:3;display:flex;align-items:center;justify-content:center}
+.tk{position:absolute;width:4.2%;min-width:30px;aspect-ratio:1;transform:translate(-50%,-50%) scale(var(--iz,1));border-radius:50%;border:3px solid var(--c);background:#111;box-shadow:0 2px 8px rgba(0,0,0,.7);z-index:3;display:flex;align-items:center;justify-content:center}
 .master .tk{cursor:grab}
 .tk img{width:100%;height:100%;object-fit:cover;border-radius:50%;pointer-events:none}
 .tk b{font-family:"Bebas Neue";font-size:16px;font-weight:400;color:#fff;pointer-events:none}
@@ -375,7 +380,7 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .tk.me{animation:tkme 1.6s ease-in-out infinite;z-index:4}
 @keyframes tkme{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
 .tk.hid{opacity:.55;border-style:dashed}.mk.hid{opacity:.6}
-.mk{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;gap:4px;cursor:pointer}
+.mk{position:absolute;transform:translate(-50%,-50%) scale(var(--iz,1));z-index:2;display:flex;align-items:center;gap:4px;cursor:pointer}
 .mk .mki{width:26px;height:26px;border-radius:50%;background:rgba(15,15,18,.92);border:2px solid #e0a030;display:flex;align-items:center;justify-content:center;font-size:13px}
 .mk-aparicao .mki{border-color:#b07cff}.mk-pista .mki{border-color:#6fa8ff}.mk-perigo .mki{border-color:#d64541}.mk-npc .mki{border-color:#cfd3d8}.mk-item .mki{border-color:#4caf6a}.mk-local .mki{border-color:#9aa3ad}
 .mk .mkl{font-size:11px;font-weight:600;background:rgba(0,0,0,.72);padding:1px 6px;border-radius:4px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
@@ -2037,7 +2042,8 @@ function mapCanvasHTML(master){
     return`<div class="mk ${master&&!v.vis?"hid":""} mk-${v.tipo||"local"}" data-mk="${k}" style="left:${v.x*100}%;top:${v.y*100}%" title="${esc(v.nome)}"><span class="mki">${ic[0]}</span><span class="mkl">${esc(v.nome)}</span></div>`}).join("");
   const toks=Object.entries(M.tokens||{}).filter(([k,v])=>v.s===id).map(([k,v])=>{const I=tokenInfo(k,v);const me=!master&&v.t==="pc"&&v.ref===myPc;
     return`<div class="tk ${mapSel.has(k)?"sel":""} ${me?"me":""} ${master&&!v.vis&&v.t!=="pc"?"hid":""} ${I.enemy?"en":""}" data-tk="${k}" style="left:${v.x*100}%;top:${v.y*100}%;--c:${I.cor}">${I.img?`<img src="${I.img}" alt="" draggable="false">`:`<b>${esc((I.nome||"?").replace(/^(Dr|Dra)\.?\s/,"").slice(0,2).toUpperCase())}</b>`}<span>${esc(I.nome)}</span></div>`}).join("");
-  return`<div class="mapwrap ${master?"master":""} ${mapMode?"mode-"+mapMode:""}" id="mapwrap" style="aspect-ratio:${S.ar};max-width:calc(${master?82:74}vh * ${S.ar.toFixed(3)});margin:0 auto"><div class="mapbg">${bg}</div><div class="maplayer" id="maplayer">${marks}${toks}</div><div class="lasso hidden" id="lasso"></div></div>`;
+  return`<div class="mapwrap ${master?"master":""} ${mapMode?"mode-"+mapMode:""}" id="mapwrap" style="aspect-ratio:${S.ar};max-width:calc(${master?82:74}vh * ${S.ar.toFixed(3)});margin:0 auto"><div class="mapz" id="mapz" style="${zoomStyle(id)}"><div class="mapbg">${bg}</div><div class="maplayer" id="maplayer">${marks}${toks}</div><div class="lasso hidden" id="lasso"></div></div>
+    <div class="mzc"><button data-act="mapZoomIn" title="aproximar (ou role o mouse)">+</button><button data-act="mapZoomOut" title="afastar">−</button><button data-act="mapZoomReset" title="ver o mapa inteiro">⤢</button><div class="mzv" id="mzv">${Math.round(zoomOf(id).z*100)}%</div></div></div>`;
 }
 function markPanelHTML(master){
   const M=viewMap();if(!mapOpenMark||!M.marks[mapOpenMark])return"";const v=M.marks[mapOpenMark];const ic=MKT[v.tipo]||MKT.local;
@@ -2062,7 +2068,7 @@ function selPanelHTML(){
      <select id="mapNpc"><option value="">NPC…</option>${(PRIV.npcs||[]).map(n=>`<option value="${n.id}">${esc(n.nome)}</option>`).join("")}</select><button class="b" data-act="mapAddNpc">+ NPC</button>
      <button class="b" data-act="mapAddEnemies">+ Inimigos em cena (${(PRIV.enemies||[]).filter(e=>e.hp>0).length})</button>
      <button class="b ${mapMode==="mark"?"on":""}" data-act="mapMarkMode">${mapMode==="mark"?"Clique no mapa…":"+ Marcador"}</button></div>
-   <div class="small" style="margin-top:6px">Fichas e marcadores com contorno tracejado estão ocultos para os jogadores.</div></div>`;
+   <div class="small" style="margin-top:6px">Fichas e marcadores com contorno tracejado estão ocultos para os jogadores. Zoom: role o mouse sobre o mapa; para arrastar a vista, segure o botão direito (ou Alt + arrastar).</div></div>`;
 }
 function marksListHTML(){
   const id=currentScene(),M=mapState();const ms=Object.entries(M.marks).filter(([k,v])=>v.s===id);
@@ -2084,8 +2090,27 @@ function refreshMap(){if(mapDrag)return;const w=$("#mapwrap");if(!w)return;
   const master=role==="mestre"&&unlocked;const view=$("#view");
   if(master&&PRIV.tab==="mapa"){if(editing())return;view.innerHTML=renderMapMaster()}else if(role==="jogador"&&ss("us-ptab")==="mapa")view.innerHTML=renderMapPlayer()}
 
+/* zoom (mouse wheel, + / − buttons) and pan (right/middle drag, Alt+drag, or drag on empty area for players) */
+const ZOOM={};
+function zoomOf(id){return ZOOM[id]||(ZOOM[id]={z:1,x:0,y:0})}
+function zoomStyle(id){const Z=zoomOf(id);return`transform:translate(${(Z.x*100).toFixed(3)}%,${(Z.y*100).toFixed(3)}%) scale(${Z.z});--iz:${(1/Z.z).toFixed(4)}`}
+function clampZoom(Z){Z.z=clamp(Z.z,1,6);Z.x=clamp(Z.x,1-Z.z,0);Z.y=clamp(Z.y,1-Z.z,0)}
+function applyZoom(){const el=$("#mapz");if(!el)return;const id=currentScene();el.setAttribute("style",zoomStyle(id));const v=$("#mzv");if(v)v.textContent=Math.round(zoomOf(id).z*100)+"%"}
+function zoomAt(fx,fy,factor){const Z=zoomOf(currentScene());const z2=clamp(Z.z*factor,1,6);const cx=(fx-Z.x)/Z.z,cy=(fy-Z.y)/Z.z;Z.x=fx-cx*z2;Z.y=fy-cy*z2;Z.z=z2;clampZoom(Z);applyZoom()}
+document.addEventListener("wheel",e=>{const w=e.target.closest&&e.target.closest("#mapwrap");if(!w)return;e.preventDefault();const r=w.getBoundingClientRect();
+  zoomAt((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height,Math.exp(-e.deltaY*(e.deltaMode===1?.05:.0015)))},{passive:false});
+document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#mapwrap"))e.preventDefault()});
+let mapPan=null;
+document.addEventListener("pointerdown",e=>{const w=e.target.closest("#mapwrap");if(!w||e.target.closest(".mzc"))return;
+  const master=role==="mestre"&&unlocked;const onItem=e.target.closest("[data-tk],[data-mk]");
+  const pan=e.button===1||e.button===2||e.altKey||(!master&&!onItem&&e.button===0&&zoomOf(currentScene()).z>1);if(!pan)return;
+  e.preventDefault();e.stopImmediatePropagation();const r=w.getBoundingClientRect();const Z=zoomOf(currentScene());
+  mapPan={x0:e.clientX,y0:e.clientY,zx:Z.x,zy:Z.y,w:r.width,h:r.height};w.classList.add("panning");w.setPointerCapture(e.pointerId)},true);
+document.addEventListener("pointermove",e=>{if(!mapPan)return;e.stopImmediatePropagation();const Z=zoomOf(currentScene());Z.x=mapPan.zx+(e.clientX-mapPan.x0)/mapPan.w;Z.y=mapPan.zy+(e.clientY-mapPan.y0)/mapPan.h;clampZoom(Z);applyZoom()},true);
+document.addEventListener("pointerup",e=>{if(!mapPan)return;e.stopImmediatePropagation();mapPan=null;const w=$("#mapwrap");if(w)w.classList.remove("panning")},true);
+
 /* pointer interactions */
-function mapXY(e){const r=$("#mapwrap").getBoundingClientRect();return[clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1)]}
+function mapXY(e){const r=($("#mapz")||$("#mapwrap")).getBoundingClientRect();return[clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1)]}
 document.addEventListener("pointerdown",e=>{
   const wrap=e.target.closest("#mapwrap");if(!wrap)return;
   const master=role==="mestre"&&unlocked;
@@ -2120,6 +2145,9 @@ function mapAction(a,t){
     case"mapScene":mapScene=t.dataset.s;if(role==="mestre"&&unlocked){PRIV.mapScene=mapScene;mapOpenMark=null}refreshMapView();return true;
     case"mkOpen":mapOpenMark=t.dataset.k;refreshMapView();return true;
     case"mkClose":mapOpenMark=null;const p=$("#mkpanel");if(p)p.innerHTML="";return true;
+    case"mapZoomIn":zoomAt(.5,.5,1.4);return true;
+    case"mapZoomOut":zoomAt(.5,.5,1/1.4);return true;
+    case"mapZoomReset":{const Z=zoomOf(currentScene());Z.z=1;Z.x=0;Z.y=0;applyZoom();return true}
   }
   if(!(role==="mestre"&&unlocked))return false;
   const before=snap();const done=()=>{pushUndo(before);syncMapPub();savePub();savePriv();refreshMapView()};
