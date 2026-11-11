@@ -383,6 +383,13 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .lasso{position:absolute;border:1.5px dashed #fff;background:rgba(255,255,255,.08);z-index:6;pointer-events:none}
 .mkrow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}.mkrow .lnk{flex:1;text-align:left;background:none;border:0;color:#fff;padding:0;font-weight:600}
 .mkrow .b{padding:3px 9px}
+.sndl{display:flex;flex-direction:column;gap:6px}
+.sndr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.sndr.on{border-color:var(--red);background:rgba(196,48,43,.08)}
+.sndr .sn{flex:1;min-width:120px}.sndr .sn b{font-size:13px}.sndr .sn small{display:block;font-size:11px;color:var(--mut)}
+.sndr .sn input{width:100%;padding:3px 6px;font-weight:600;font-size:13px}
+.sndr select{padding:3px 6px;font-size:12px}.sndr .b{padding:4px 9px}.upl{cursor:pointer;font-size:12px}
+.sndr .clr{background:none;border:0;color:var(--dim);font-size:11px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 </style>
@@ -629,6 +636,7 @@ function initFirebase(){
   fdb.ref("publico/fx").on("value",s=>onFx(s.val()));
   fdb.ref("publico/som").on("value",s=>onSom(s.val()));
   fdb.ref("publico/ambiente").on("value",s=>onAmbiente(s.val()));
+  fdb.ref("publico/sonsArq").on("value",s=>onSonsArq(s.val()));
   q.on("child_removed",s=>{const v=s.val()||{};LOG=LOG.filter(x=>x._k!==s.key&&x.id!==v.id);myRolls=myRolls.filter(x=>x.id!==v.id);renderFeeds()});
   fauth.onAuthStateChanged(u=>{
     const isM=!!(u&&u.email&&MASTER_EMAIL&&u.email.toLowerCase()===MASTER_EMAIL.toLowerCase());
@@ -1668,7 +1676,6 @@ function startRain(forte){
   const g=ac.createGain();g.gain.value=0;g.gain.setTargetAtTime(target,ac.currentTime,.8);s.connect(lp).connect(g).connect(ac.destination);s.start();rainNode=s;rainGain=g;
 }
 function stopRain(){if(!rainNode||!AC)return;const n=rainNode,g=rainGain;g.gain.setTargetAtTime(0,AC.currentTime,.7);setTimeout(()=>{try{n.stop()}catch(e){}},3500);rainNode=null;rainGain=null}
-function applyAmbient(){if(AMB.chuva&&soundOn())startRain(AMB.forte);else stopRain()}
 function playBuf(ac,buf,vol){const s=ac.createBufferSource();s.buffer=buf;const g=ac.createGain();g.gain.value=vol;s.connect(g).connect(ac.destination);s.start()}
 function sndZumbi(){
   const ac=audio();if(!ac)return;const t=ac.currentTime,dur=2.4+Math.random()*.8,f0=78+Math.random()*25;
@@ -1701,35 +1708,91 @@ function sndPortao(){
   playBuf(ac,buf,.8);
 }
 const SND={zumbi:sndZumbi,porta:sndPorta,portao:sndPortao};
-function playSom(tipo){if(!soundOn())return;try{SND[tipo]&&SND[tipo]()}catch(e){}}
+const BUILTIN_SONS=[{id:"chuva",nome:"Chuva",loop:true,vol:.8,builtin:true},{id:"zumbi",nome:"Zumbi",loop:false,vol:1,builtin:true},{id:"porta",nome:"Porta abrindo",loop:false,vol:1,builtin:true},{id:"portao",nome:"Portão de enrolar",loop:false,vol:1,builtin:true}];
+let SARQ={};const decodedSnd={};const LOOPS={};
+function sonsList(){if(!Array.isArray(PUB.sons)||!PUB.sons.length)PUB.sons=JSON.parse(JSON.stringify(BUILTIN_SONS));return PUB.sons}
+function slotOf(id){return sonsList().find(s=>s.id===id)}
+function normAmb(x){x=x||{};const loops=Object.assign({},x.loops||{});if(x.chuva)loops.chuva=true;return{loops,forte:!!x.forte}}
+AMB=normAmb(AMB);
+async function getSndBuf(id){const a=SARQ[id];if(!a||!a.data)return null;const ac=audio();if(!ac)return null;const c=decodedSnd[id];if(c&&c.at===a.at)return c.buf;
+  const bin=atob(String(a.data).split(",").pop());const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  const buf=await new Promise((res,rej)=>{try{const p=ac.decodeAudioData(u.buffer.slice(0),res,rej);if(p&&p.then)p.then(res,rej)}catch(e){rej(e)}});decodedSnd[id]={at:a.at,buf};return buf}
+async function playSom(id){
+  if(!soundOn())return;const s=slotOf(id);const vol=s&&s.vol!=null?s.vol:1;
+  let buf=null;try{buf=await getSndBuf(id)}catch(e){buf=null}
+  if(buf){const ac=audio();const src=ac.createBufferSource();src.buffer=buf;const g=ac.createGain();g.gain.value=vol;src.connect(g).connect(ac.destination);src.start();return}
+  try{if(SND[id])SND[id]()}catch(e){}
+}
+async function startLoop(id){
+  if(!soundOn()||LOOPS[id])return;const ac=audio();if(!ac)return;const s=slotOf(id);const vol=s&&s.vol!=null?s.vol:1;
+  LOOPS[id]={pending:true};let buf=null;try{buf=await getSndBuf(id)}catch(e){buf=null}
+  if(!LOOPS[id])return;
+  if(buf){const src=ac.createBufferSource();src.buffer=buf;src.loop=true;const g=ac.createGain();g.gain.value=0;g.gain.setTargetAtTime(vol,ac.currentTime,.8);src.connect(g).connect(ac.destination);src.start();LOOPS[id]={src,g,at:SARQ[id].at};return}
+  if(id==="chuva"){startRain(AMB.forte);LOOPS[id]={synth:true};return}
+  delete LOOPS[id];
+}
+function stopLoop(id){const L=LOOPS[id];if(!L)return;delete LOOPS[id];if(L.synth){stopRain();return}if(L.src&&AC){L.g.gain.setTargetAtTime(0,AC.currentTime,.7);const s=L.src;setTimeout(()=>{try{s.stop()}catch(e){}},3500)}}
+function applyAmbient(){
+  const active=role==="jogador"||(role==="mestre"&&unlocked);const want=soundOn()&&active?(AMB.loops||{}):{};
+  Object.keys(LOOPS).forEach(id=>{if(!want[id])stopLoop(id)});
+  Object.keys(want).forEach(id=>{if(!want[id])return;const L=LOOPS[id];
+    if(L&&L.at&&SARQ[id]&&SARQ[id].at!==L.at){stopLoop(id)}
+    if(L&&L.synth&&SARQ[id]){stopLoop(id)}
+    if(!LOOPS[id])startLoop(id);else if(L&&L.g&&AC){const s=slotOf(id);L.g.gain.setTargetAtTime(s&&s.vol!=null?s.vol:1,AC.currentTime,.3)}});
+  if(LOOPS.chuva&&LOOPS.chuva.synth)startRain(AMB.forte);
+}
 function onSom(x){
   if(!x||!x.id||x.id===lastSomId)return;lastSomId=x.id;ls("us-lastsom",x.id);
   if(Date.now()-(x.at||0)>20000)return;if(role==="mestre"&&unlocked)return;if(role!=="jogador"||!myPc)return;
   if(!(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc))))return;playSom(x.tipo);
 }
-function onAmbiente(x){AMB=Object.assign({chuva:false,forte:false},x||{});if(role==="jogador"||(role==="mestre"&&unlocked))applyAmbient();const el=$("#ambBox");if(el)el.innerHTML=ambMasterInner()}
-function sendSom(tipo){
-  playSom(tipo);
-  if(LOCAL()||!fdb){return}
-  fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo,alvos:pd.alvos,at:Date.now()})).catch(e=>toast("Som não enviado: "+(e&&e.code||"erro")));
+function onAmbiente(x){AMB=normAmb(x);applyAmbient();refreshSndBox()}
+function onSonsArq(v){SARQ=v||{};applyAmbient();refreshSndBox();if(AC)Object.keys(SARQ).forEach(id=>getSndBuf(id).catch(()=>{}))}
+function sendSom(id){playSom(id);if(LOCAL()||!fdb)return;
+  fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:pd.alvos,at:Date.now()})).catch(e=>toast("Som não enviado: "+(e&&e.code||"erro")))}
+function setAmbiente(patch){AMB=normAmb(Object.assign({},AMB,patch));applyAmbient();if(!LOCAL()&&fdb)fdb.ref("publico/ambiente").set(clean(AMB)).catch(()=>{});refreshSndBox()}
+function refreshSndBox(){const el=$("#ambBox");if(el&&!(document.activeElement&&el.contains(document.activeElement)&&document.activeElement.tagName==="INPUT"))el.innerHTML=ambMasterInner()}
+function ambMasterInner(){
+  const L=sonsList();
+  return`<div class="sndl">${L.map(s=>{const on=!!(AMB.loops||{})[s.id];const arq=!!(SARQ[s.id]&&SARQ[s.id].data);
+    return`<div class="sndr ${on?"on":""}">
+      ${s.loop?`<button class="b ${on?"on":""}" data-act="sndLoop" data-id="${s.id}" title="${on?"parar":"ligar em loop"}">${on?"⏹":"▶"}</button>`:`<button class="b" data-act="sndPlay" data-id="${s.id}" title="tocar">▶</button>`}
+      <div class="sn">${s.builtin?`<b>${esc(s.nome)}</b>`:`<input type="text" data-sndnome="${s.id}" value="${esc(s.nome)}">`}
+        <small>${s.loop?"ambiente, repete":"toca uma vez"} · ${arq?"<span style='color:var(--good)'>arquivo próprio</span>":s.builtin?"sintetizado":"<span style='color:var(--warn)'>sem arquivo</span>"}</small></div>
+      <select data-sndvol="${s.id}" title="volume">${[[.3,"baixo"],[.6,"médio"],[.8,"alto"],[1,"máximo"]].map(([v,n])=>`<option value="${v}" ${Math.abs((s.vol??1)-v)<.01?"selected":""}>${n}</option>`).join("")}</select>
+      <label class="b upl" title="enviar arquivo de áudio">${arq?"Trocar":"Enviar"} arquivo<input type="file" accept="audio/*" data-sndup="${s.id}" hidden></label>
+      ${arq?`<button class="clr" data-act="sndDelArq" data-id="${s.id}" title="remover arquivo">✕ arquivo</button>`:""}
+      ${!s.builtin?`<button class="clr" data-act="sndDel" data-id="${s.id}" title="apagar som">apagar</button>`:""}
+    </div>`}).join("")}</div>
+  ${(AMB.loops||{}).chuva&&!(SARQ.chuva&&SARQ.chuva.data)?`<div class="btnrow" style="margin-top:6px"><button class="b ${AMB.forte?"on":""}" data-act="sndForte">Chuva sintetizada: ${AMB.forte?"tempestade":"garoa"} · trocar</button></div>`:""}
+  <div class="row"><input type="text" id="sndNovo" placeholder="Novo som — ex.: Trovão, Passos, Alarme" style="flex:1;padding:6px 8px"><label class="toggle" style="font-size:12px;color:var(--mut)"><input type="checkbox" id="sndNovoLoop"> repetir</label><button class="b" data-act="sndAdd">+ Adicionar</button></div>
+  <div class="small" style="margin-top:6px">Sons que repetem tocam para todos até você parar. Os outros vão para quem estiver em “Quem”. Arquivos MP3, OGG ou WAV de até 2 MB.</div>`;
 }
-function setAmbiente(patch){
-  AMB=Object.assign({},AMB,patch);applyAmbient();
-  if(!LOCAL()&&fdb)fdb.ref("publico/ambiente").set(clean(AMB)).catch(()=>{});
-  const el=$("#ambBox");if(el)el.innerHTML=ambMasterInner();
-}
-function ambMasterInner(){return`<div class="btnrow"><button class="b ${AMB.chuva?"on":""}" data-act="ambRain">${AMB.chuva?"🌧 Chuva ligada · desligar":"🌧 Ligar chuva"}</button>
-  ${AMB.chuva?`<button class="b ${AMB.forte?"on":""}" data-act="ambForte">${AMB.forte?"Tempestade":"Garoa"} · trocar</button>`:""}</div>
-  <div class="fxg" style="margin-top:8px">${SONS.map(([k,n,d])=>`<button class="fxb snd" data-act="somSend" data-k="${k}"><b>${n}</b><span>${d}</span></button>`).join("")}</div>
-  <div class="small" style="margin-top:6px">A chuva toca para todos até você desligar. Os outros sons vão para quem estiver marcado em “Quem”. Você também ouve.</div>`}
 function ambMasterHTML(){return`<div class="card"><h3>Sons de ambiente</h3><div id="ambBox">${ambMasterInner()}</div></div>`}
+async function uploadSnd(id,file){
+  if(!file)return;if(file.size>2*1024*1024){toast("Arquivo grande demais: use até 2 MB (um MP3 curto).");return}
+  const data=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file)});
+  try{const ac=audio();if(ac){const bin=atob(data.split(",").pop());const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);await new Promise((res,rej)=>{const p=ac.decodeAudioData(u.buffer.slice(0),res,rej);if(p&&p.then)p.then(res,rej)})}}
+  catch(e){toast("Não consegui ler esse áudio. Tente um MP3.");return}
+  const rec={mime:file.type||"audio/mpeg",data,at:Date.now(),nome:file.name.slice(0,60)};
+  if(LOCAL()||!fdb){SARQ[id]=rec;onSonsArq(SARQ)}else{toast("Enviando…");try{await fdb.ref("publico/sonsArq/"+id).set(rec);toast("Som enviado para a mesa.")}catch(e){toast("Não enviou: "+(e&&e.code||"erro"))}}
+}
+document.addEventListener("change",e=>{const t=e.target;if(!(role==="mestre"&&unlocked))return;
+  if(t.dataset.sndup){uploadSnd(t.dataset.sndup,t.files[0]);t.value="";return}
+  if(t.dataset.sndvol){const s=slotOf(t.dataset.sndvol);if(s){s.vol=Number(t.value);savePub();applyAmbient()}return}});
+document.addEventListener("input",e=>{const t=e.target;if(!(role==="mestre"&&unlocked)||!t.dataset.sndnome)return;const s=slotOf(t.dataset.sndnome);if(s){s.nome=t.value.slice(0,40);savePub()}});
 document.addEventListener("pointerdown",()=>{setTimeout(applyAmbient,50)},{once:true});
 document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(!t)return;const a=t.dataset.act;
   if(a==="som"){setTimeout(applyAmbient,30);return}
-  if(!(role==="mestre"&&unlocked))return;
-  if(a==="ambRain"){e.stopImmediatePropagation();setAmbiente({chuva:!AMB.chuva});diary(AMB.chuva?"Começa a chover":"A chuva para","efeito");return}
-  if(a==="ambForte"){e.stopImmediatePropagation();setAmbiente({forte:!AMB.forte});return}
-  if(a==="somSend"){e.stopImmediatePropagation();sendSom(t.dataset.k);return}
+  if(!(role==="mestre"&&unlocked)||!/^snd/.test(a))return;e.stopImmediatePropagation();const id=t.dataset.id;
+  if(a==="sndPlay"){sendSom(id);return}
+  if(a==="sndLoop"){const on=!(AMB.loops||{})[id];const loops=Object.assign({},AMB.loops);if(on)loops[id]=true;else delete loops[id];setAmbiente({loops});const s=slotOf(id);diary(`${on?"Começa":"Para"}: ${s?s.nome:id}`,"efeito");return}
+  if(a==="sndForte"){setAmbiente({forte:!AMB.forte});return}
+  if(a==="sndAdd"){const n=($("#sndNovo").value||"").trim();if(!n){toast("Dê um nome ao som.");return}sonsList().push({id:"x"+Date.now().toString(36),nome:n.slice(0,40),loop:$("#sndNovoLoop").checked,vol:1});savePub();refreshSndBox();return}
+  if(a==="sndDelArq"){if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="confirmar?";setTimeout(()=>{t.dataset.arm="";t.textContent="✕ arquivo"},2500);return}
+    if(LOCAL()||!fdb){delete SARQ[id];onSonsArq(SARQ)}else fdb.ref("publico/sonsArq/"+id).remove().catch(()=>{});return}
+  if(a==="sndDel"){if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="confirmar?";setTimeout(()=>{t.dataset.arm="";t.textContent="apagar"},2500);return}
+    PUB.sons=sonsList().filter(s=>s.id!==id);const loops=Object.assign({},AMB.loops);delete loops[id];setAmbiente({loops});savePub();if(!LOCAL()&&fdb)fdb.ref("publico/sonsArq/"+id).remove().catch(()=>{});else{delete SARQ[id]}refreshSndBox();return}
 },true);
 
 /* ---------- MAPS ---------- */
@@ -1954,7 +2017,7 @@ async function doReset(){
   catch(e){$("#rsMsg").textContent="Não consegui salvar o backup, nada foi apagado ("+(e&&e.code||"erro")+").";$("#rsOk").disabled=false;return}
   const keepLog=!$("#rsLog").checked?true:false, wipeDiario=$("#rsDiario").checked, wipePistas=$("#rsPistas").checked, wipeNotas=$("#rsNotas").checked;
   const before=snap();
-  PUB=pubDefaults();
+  const __sons=PUB.sons;PUB=pubDefaults();if(Array.isArray(__sons))PUB.sons=__sons;
   const old=PRIV;const np=privDefaults();
   np.pinHash=old.pinHash;np.tab="mesa";
   PCS.forEach(p=>{np.pcs[p.id]={seg:old.pcs[p.id]?old.pcs[p.id].seg:"",traumas:"",notas:wipeNotas?"":(old.pcs[p.id]&&old.pcs[p.id].notas)||""}});
@@ -1966,7 +2029,7 @@ async function doReset(){
   PRIV=np;UNDO=[before];mapState();syncMapPub();
   if(!keepLog){LOG=[];myRolls=[];if(fdb)await fdb.ref("rolagens").remove().catch(()=>{})}
   if(fdb){await fdb.ref("publico/fx").remove().catch(()=>{});await fdb.ref("publico/ambiente").remove().catch(()=>{});await fdb.ref("publico/som").remove().catch(()=>{});lastFxId=null}
-  AMB={chuva:false,forte:false};stopRain();
+  AMB={loops:{},forte:false};applyAmbient();
   if(wipePistas){if(fdb){await fdb.ref("publico/pistas").remove().catch(()=>{});await fdb.ref("mestre/pistas").remove().catch(()=>{})}PISTAS={};MPISTAS={};ls("us-pistas",{});ls("us-mpistas",{})}
   savePub();savePriv();if(LOCAL())saveLocal();
   $("#rsModal").classList.remove("on");renderAll();renderFeeds();
