@@ -627,6 +627,8 @@ function initFirebase(){
   q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id);notifyRoll(r)}ingestOne(r);renderFeeds()});
   fdb.ref("publico/pistas").on("value",s=>onPistas(s.val()||{}));
   fdb.ref("publico/fx").on("value",s=>onFx(s.val()));
+  fdb.ref("publico/som").on("value",s=>onSom(s.val()));
+  fdb.ref("publico/ambiente").on("value",s=>onAmbiente(s.val()));
   q.on("child_removed",s=>{const v=s.val()||{};LOG=LOG.filter(x=>x._k!==s.key&&x.id!==v.id);myRolls=myRolls.filter(x=>x.id!==v.id);renderFeeds()});
   fauth.onAuthStateChanged(u=>{
     const isM=!!(u&&u.email&&MASTER_EMAIL&&u.email.toLowerCase()===MASTER_EMAIL.toLowerCase());
@@ -996,6 +998,7 @@ function renderMesa(){
     <div class="card"><h3>Grupo</h3><div class="party" id="party">${partyHTML()}</div>
       <p class="small" style="margin-bottom:0">● verde = jogador conectado agora. Ficha completa nas abas de cada personagem.</p></div>
     ${fxMasterHTML()}
+    ${ambMasterHTML()}
     ${supMasterHTML()}
     <div class="card"><h3>Descanso</h3><div class="btnrow"><button class="b" data-act="rest" data-k="curto">Descanso curto · +1D4 PV</button><button class="b" data-act="rest" data-k="noite">Noite segura · +1D6+Vontade, zera Medo</button></div>
       <div class="small" style="margin-top:6px">Vale para todo o grupo. Incapacitados estáveis acordam com 1 PV na noite segura. Clique duas vezes para confirmar.</div></div>
@@ -1316,7 +1319,7 @@ document.querySelectorAll("[data-mdie]").forEach(b=>b.onclick=()=>{const f=Numbe
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-act],[data-pick],[data-tab],[data-ptab],[data-pd]");if(!t)return;
-  if(t.dataset.pick){myPc=t.dataset.pick;role="jogador";ls("us-last-pc",myPc);lastResult=null;Object.keys(PISTAS).forEach(k=>seenPistas.add(k));ls("us-seen-pistas",[...seenPistas]);updateOnline();renderAll();window.scrollTo({top:0});if(soundOn())audio();return}
+  if(t.dataset.pick){myPc=t.dataset.pick;role="jogador";ls("us-last-pc",myPc);lastResult=null;Object.keys(PISTAS).forEach(k=>seenPistas.add(k));ls("us-seen-pistas",[...seenPistas]);updateOnline();renderAll();window.scrollTo({top:0});if(soundOn())audio();setTimeout(applyAmbient,120);return}
   if(t.dataset.ptab){ss("us-ptab",t.dataset.ptab);renderTabs();renderView();return}
   if(t.dataset.tab){PRIV.tab=t.dataset.tab;savePriv();renderTabs();renderView();window.scrollTo({top:0});return}
   if(t.dataset.pd){const k=t.dataset.pd,v=t.dataset.v;
@@ -1647,6 +1650,88 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-bk]");if(!
 /* ---------- QoL: PWA ---------- */
 if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 
+/* ---------- ambient sounds (synthesized) ---------- */
+const SONS=[["zumbi","Zumbi","gemido arrastado"],["porta","Porta abrindo","rangido de dobradiça"],["portao","Portão de enrolar","a porta de aço da oficina"]];
+let rainNode=null, rainGain=null, AMB={chuva:false,forte:false}, lastSomId=ls("us-lastsom")||null;
+function mkBuf(ac,sec,ch,fill){const b=ac.createBuffer(ch,Math.floor(ac.sampleRate*sec),ac.sampleRate);for(let c=0;c<ch;c++)fill(b.getChannelData(c),ac.sampleRate,c);return b}
+function rainBuffer(ac){
+  return mkBuf(ac,6,2,(d,sr,c)=>{let b0=0,b1=0,b2=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[i]=(b0+b1+b2+w*.1848)*.11}
+    const drops=Math.floor(6*(c?170:150));for(let k=0;k<drops;k++){const p=Math.floor(Math.random()*d.length),amp=.15+Math.random()*.35,dec=sr*(.002+Math.random()*.006),f=2200+Math.random()*3500;
+      for(let j=0;j<dec*5&&p+j<d.length;j++)d[p+j]+=Math.sin(2*Math.PI*f*j/sr)*amp*Math.exp(-j/dec)}
+    const fade=Math.floor(sr*.05);for(let i=0;i<fade;i++){const g=i/fade;d[i]*=g;d[d.length-1-i]*=g}});
+}
+function startRain(forte){
+  if(!soundOn())return;const ac=audio();if(!ac)return;
+  const target=forte?.9:.5;
+  if(rainNode){rainGain.gain.setTargetAtTime(target,ac.currentTime,.6);return}
+  const s=ac.createBufferSource();s.buffer=rainBuffer(ac);s.loop=true;const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;
+  const g=ac.createGain();g.gain.value=0;g.gain.setTargetAtTime(target,ac.currentTime,.8);s.connect(lp).connect(g).connect(ac.destination);s.start();rainNode=s;rainGain=g;
+}
+function stopRain(){if(!rainNode||!AC)return;const n=rainNode,g=rainGain;g.gain.setTargetAtTime(0,AC.currentTime,.7);setTimeout(()=>{try{n.stop()}catch(e){}},3500);rainNode=null;rainGain=null}
+function applyAmbient(){if(AMB.chuva&&soundOn())startRain(AMB.forte);else stopRain()}
+function playBuf(ac,buf,vol){const s=ac.createBufferSource();s.buffer=buf;const g=ac.createGain();g.gain.value=vol;s.connect(g).connect(ac.destination);s.start()}
+function sndZumbi(){
+  const ac=audio();if(!ac)return;const t=ac.currentTime,dur=2.4+Math.random()*.8,f0=78+Math.random()*25;
+  const o=ac.createOscillator();o.type="sawtooth";o.frequency.setValueAtTime(f0*1.15,t);o.frequency.linearRampToValueAtTime(f0,t+dur*.5);o.frequency.linearRampToValueAtTime(f0*.82,t+dur);
+  const lfo=ac.createOscillator();lfo.frequency.value=4.5+Math.random()*2;const lg=ac.createGain();lg.gain.value=7;lfo.connect(lg).connect(o.frequency);
+  const ws=ac.createWaveShaper();const cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(x*3)}ws.curve=cv;
+  const f1=ac.createBiquadFilter();f1.type="bandpass";f1.frequency.value=380;f1.Q.value=5;const f2=ac.createBiquadFilter();f2.type="bandpass";f2.frequency.setValueAtTime(650,t);f2.frequency.linearRampToValueAtTime(480,t+dur);f2.Q.value=7;
+  const n=ac.createBufferSource();n.buffer=noiseBuf(ac,dur);const nf=ac.createBiquadFilter();nf.type="bandpass";nf.frequency.value=900;nf.Q.value=1.2;const ng=ac.createGain();ng.gain.value=.12;const zl=ac.createBiquadFilter();zl.type="lowpass";zl.frequency.value=1600;
+  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.95,t+.35);g.gain.setValueAtTime(.95,t+dur*.6);g.gain.linearRampToValueAtTime(0,t+dur);
+  o.connect(ws);ws.connect(f1).connect(g);ws.connect(f2).connect(g);n.connect(nf).connect(ng).connect(g);g.connect(zl).connect(ac.destination);
+  o.start(t);lfo.start(t);n.start(t);o.stop(t+dur);lfo.stop(t+dur);
+}
+function sndPorta(){
+  const ac=audio();if(!ac)return;const sr=ac.sampleRate,dur=2.2;
+  const buf=mkBuf(ac,dur+.4,1,(d)=>{let ph=0;for(let i=0;i<dur*sr;i+=0){const tt=i/sr;const rate=55+60*Math.sin(Math.PI*tt/dur)+25*Math.sin(tt*9)+Math.random()*10;const step=Math.max(40,Math.floor(sr/rate));
+      const amp=.35*Math.sin(Math.PI*Math.min(1,tt/dur))+.08,f=900+500*Math.sin(tt*2.3)+Math.random()*80,dec=sr*.004;
+      for(let j=0;j<step*1.5&&i+j<d.length;j++)d[i+j]+=Math.sin(2*Math.PI*f*j/sr)*amp*Math.exp(-j/dec);i+=step}
+    const p=Math.floor(dur*sr);for(let j=0;p+j<d.length;j++){const e=Math.exp(-j/(sr*.06));d[p+j]+=(Math.sin(2*Math.PI*75*j/sr)*.7+(Math.random()*2-1)*.25)*e}});
+  playBuf(ac,buf,.75);
+}
+function sndPortao(){
+  const ac=audio();if(!ac)return;const sr=ac.sampleRate,dur=3.8;
+  const buf=mkBuf(ac,dur+1,2,(d,s,c)=>{const N=d.length;
+    for(let i=0;i<dur*sr;i++){const tt=i/sr;d[i]+=(Math.random()*2-1)*.05*Math.min(1,tt*3)}
+    let lp=0;for(let i=0;i<N;i++){lp+=.02*(d[i]-lp);d[i]=lp*3}
+    for(let tt=.05;tt<dur;tt+=1/(22+6*Math.sin(tt*1.7)+Math.random()*5)){const p=Math.floor(tt*sr),amp=.18+Math.random()*.18,dec=sr*(.01+Math.random()*.01);
+      const fs=[523,1187,1874,2650].map(f=>f*(1+(Math.random()-.5)*.08)+(c?7:0));
+      for(let j=0;j<dec*5&&p+j<N;j++){const e=Math.exp(-j/dec);let v=(Math.random()*2-1)*.6;fs.forEach((f,k)=>v+=Math.sin(2*Math.PI*f*j/sr)*(.5/(k+1)));d[p+j]+=v*amp*e}}
+    const p=Math.floor(dur*sr);for(let j=0;p+j<N;j++){const e=Math.exp(-j/(sr*.35));d[p+j]+=(Math.sin(2*Math.PI*62*j/sr)*.6+Math.sin(2*Math.PI*431*j/sr)*.25*Math.exp(-j/(sr*.12))+(Math.random()*2-1)*.2*Math.exp(-j/(sr*.03)))*e}});
+  playBuf(ac,buf,.8);
+}
+const SND={zumbi:sndZumbi,porta:sndPorta,portao:sndPortao};
+function playSom(tipo){if(!soundOn())return;try{SND[tipo]&&SND[tipo]()}catch(e){}}
+function onSom(x){
+  if(!x||!x.id||x.id===lastSomId)return;lastSomId=x.id;ls("us-lastsom",x.id);
+  if(Date.now()-(x.at||0)>20000)return;if(role==="mestre"&&unlocked)return;if(role!=="jogador"||!myPc)return;
+  if(!(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc))))return;playSom(x.tipo);
+}
+function onAmbiente(x){AMB=Object.assign({chuva:false,forte:false},x||{});if(role==="jogador"||(role==="mestre"&&unlocked))applyAmbient();const el=$("#ambBox");if(el)el.innerHTML=ambMasterInner()}
+function sendSom(tipo){
+  playSom(tipo);
+  if(LOCAL()||!fdb){return}
+  fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo,alvos:pd.alvos,at:Date.now()})).catch(e=>toast("Som não enviado: "+(e&&e.code||"erro")));
+}
+function setAmbiente(patch){
+  AMB=Object.assign({},AMB,patch);applyAmbient();
+  if(!LOCAL()&&fdb)fdb.ref("publico/ambiente").set(clean(AMB)).catch(()=>{});
+  const el=$("#ambBox");if(el)el.innerHTML=ambMasterInner();
+}
+function ambMasterInner(){return`<div class="btnrow"><button class="b ${AMB.chuva?"on":""}" data-act="ambRain">${AMB.chuva?"🌧 Chuva ligada · desligar":"🌧 Ligar chuva"}</button>
+  ${AMB.chuva?`<button class="b ${AMB.forte?"on":""}" data-act="ambForte">${AMB.forte?"Tempestade":"Garoa"} · trocar</button>`:""}</div>
+  <div class="fxg" style="margin-top:8px">${SONS.map(([k,n,d])=>`<button class="fxb snd" data-act="somSend" data-k="${k}"><b>${n}</b><span>${d}</span></button>`).join("")}</div>
+  <div class="small" style="margin-top:6px">A chuva toca para todos até você desligar. Os outros sons vão para quem estiver marcado em “Quem”. Você também ouve.</div>`}
+function ambMasterHTML(){return`<div class="card"><h3>Sons de ambiente</h3><div id="ambBox">${ambMasterInner()}</div></div>`}
+document.addEventListener("pointerdown",()=>{setTimeout(applyAmbient,50)},{once:true});
+document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(!t)return;const a=t.dataset.act;
+  if(a==="som"){setTimeout(applyAmbient,30);return}
+  if(!(role==="mestre"&&unlocked))return;
+  if(a==="ambRain"){e.stopImmediatePropagation();setAmbiente({chuva:!AMB.chuva});diary(AMB.chuva?"Começa a chover":"A chuva para","efeito");return}
+  if(a==="ambForte"){e.stopImmediatePropagation();setAmbiente({forte:!AMB.forte});return}
+  if(a==="somSend"){e.stopImmediatePropagation();sendSom(t.dataset.k);return}
+},true);
+
 /* ---------- MAPS ---------- */
 const MCAT={adm:"#6b7280",enf:"#3f72c4",uti:"#c0484a",cir:"#2fa08d",lab:"#6366d1",serv:"#d1a23a",alim:"#d9803a",far:"#3d9d62",rest:"#9b2f2f"};
 const Q={TL:[60,60,390,250],TR:[550,60,390,250],BL:[60,390,390,250],BR:[550,390,390,250]};
@@ -1880,7 +1965,8 @@ async function doReset(){
   np.mapa={tokens:{},marks:Object.fromEntries(Object.entries((old.mapa&&old.mapa.marks)||{}).map(([k,v])=>[k,Object.assign({},v,{vis:!!v.base})]))};
   PRIV=np;UNDO=[before];mapState();syncMapPub();
   if(!keepLog){LOG=[];myRolls=[];if(fdb)await fdb.ref("rolagens").remove().catch(()=>{})}
-  if(fdb){await fdb.ref("publico/fx").remove().catch(()=>{});lastFxId=null}
+  if(fdb){await fdb.ref("publico/fx").remove().catch(()=>{});await fdb.ref("publico/ambiente").remove().catch(()=>{});await fdb.ref("publico/som").remove().catch(()=>{});lastFxId=null}
+  AMB={chuva:false,forte:false};stopRain();
   if(wipePistas){if(fdb){await fdb.ref("publico/pistas").remove().catch(()=>{});await fdb.ref("mestre/pistas").remove().catch(()=>{})}PISTAS={};MPISTAS={};ls("us-pistas",{});ls("us-mpistas",{})}
   savePub();savePriv();if(LOCAL())saveLocal();
   $("#rsModal").classList.remove("on");renderAll();renderFeeds();
