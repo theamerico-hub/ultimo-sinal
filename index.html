@@ -390,6 +390,9 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .sndr .sn input{width:100%;padding:3px 6px;font-weight:600;font-size:13px}
 .sndr select{padding:3px 6px;font-size:12px}.sndr .b{padding:4px 9px}.upl{cursor:pointer;font-size:12px}
 .sndr .clr{background:none;border:0;color:var(--dim);font-size:11px}
+.ovl{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
+.ovr{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.ovr .ovi{flex:1;min-width:0}.ovr .ovi b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ovr .ovi small{font-size:11px;color:var(--mut)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 </style>
@@ -456,6 +459,13 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
   <input type="text" id="rsIn" autocomplete="off" style="width:100%;padding:8px 10px;margin-top:4px;font-size:16px;letter-spacing:.1em">
   <div class="btnrow" style="justify-content:space-between;margin-top:14px"><button class="b" id="rsCancel">Cancelar</button><button class="b dmg" id="rsOk" disabled>Resetar mesa</button></div>
   <p class="small" id="rsMsg" style="margin-bottom:0"></p></div></div>
+<div class="modal" id="ovModal"><div class="box wide">
+  <h2 style="font-size:26px" id="ovT">Buscar som</h2>
+  <div class="row" style="margin-top:6px"><input type="text" id="ovQ" style="flex:1;padding:7px 9px"><button class="b pri" id="ovGo">Buscar</button></div>
+  <p class="small" id="ovM" style="margin:6px 0"></p>
+  <div id="ovR" class="ovl"></div>
+  <div class="btnrow" style="justify-content:space-between;margin-top:12px"><button class="b" id="ovDefault">Voltar ao som padrão</button><button class="b" id="ovClose">Fechar</button></div>
+  <p class="small" style="margin-bottom:0">Sons do Openverse (principalmente Freesound), licença CC0. Tocam direto da fonte; precisam de internet na sessão.</p></div></div>
 <div id="notes"></div>
 <div id="horror"></div>
 <div class="modal" id="pistaModal"><div class="box wide pbox"><div class="t" style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#ff8a80">Nova pista</div><h2 id="pmT" style="font-size:32px;margin:4px 0 10px"></h2><img id="pmI" class="hidden" alt=""><div id="pmX" style="white-space:pre-wrap;color:#d3d0ca;font-family:'Special Elite',monospace;font-size:15px;margin-top:8px"></div><div class="btnrow" style="justify-content:flex-end;margin-top:14px"><button class="b pri" onclick="document.getElementById('pistaModal').classList.remove('on')">Fechar</button></div></div></div>
@@ -629,7 +639,7 @@ function initFirebase(){
   fdb.ref(".info/connected").on("value",s=>{connected=!!s.val();if(connected)updateOnline();setConn()});
   fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};setConn();renderOnline();if(!role)renderView()});
   fdb.ref("publico").on("value",s=>{const x=s.val();if(x&&x.json&&x.by!==clientId){const old=role==="jogador"&&myPc?myScene():null;try{PUB=mergePub(JSON.parse(x.json))}catch(e){}
-    if(old&&myScene()!==old){const S=SCMAP[myScene()];if(S){toast(`${PCMAP[myPc].nome} foi para: ${S.grupo==="Hospital"?"Hospital · ":""}${S.nome}`);mapScene=null}}rerender()}});
+    if(old&&myScene()!==old){const S=SCMAP[myScene()];if(S){toast(`${PCMAP[myPc].nome} foi para: ${S.grupo==="Hospital"?"Hospital · ":""}${S.nome}`);mapScene=null}}rerender();try{applyAmbient()}catch(e){}}});
   const q=fdb.ref("rolagens").orderByChild("at").limitToLast(150);
   q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id);notifyRoll(r)}ingestOne(r);renderFeeds()});
   fdb.ref("publico/pistas").on("value",s=>onPistas(s.val()||{}));
@@ -1710,6 +1720,20 @@ function sndPortao(){
 const SND={zumbi:sndZumbi,porta:sndPorta,portao:sndPortao};
 const BUILTIN_SONS=[{id:"chuva",nome:"Chuva",loop:true,vol:.8,builtin:true},{id:"zumbi",nome:"Zumbi",loop:false,vol:1,builtin:true},{id:"porta",nome:"Porta abrindo",loop:false,vol:1,builtin:true},{id:"portao",nome:"Portão de enrolar",loop:false,vol:1,builtin:true}];
 let SARQ={};const decodedSnd={};const LOOPS={};
+/* real recorded defaults (CC0, Freesound via Openverse) */
+const SOM_PADRAO={
+  chuva:[{url:"https://cdn.freesound.org/previews/584/584945_1481531-hq.mp3",titulo:"Rain Loop 1",autor:"richwise",link:"https://freesound.org/people/richwise/sounds/584945"}],
+  zumbi:[{url:"https://cdn.freesound.org/previews/559/559558_7817976-hq.mp3",titulo:"Zombie Groan",autor:"ChuckChuckGoof",link:"https://freesound.org/people/ChuckChuckGoof/sounds/559558"},
+         {url:"https://cdn.freesound.org/previews/244/244320_3151690-hq.mp3",titulo:"groaning.mp3",autor:"Philip_Daniels",link:"https://freesound.org/people/Philip_Daniels/sounds/244320"},
+         {url:"https://cdn.freesound.org/previews/463/463721_1106446-hq.mp3",titulo:"Burp Monster Zombie groan moan",autor:"EricsSoundschmiede",link:"https://freesound.org/people/EricsSoundschmiede/sounds/463721"}],
+  porta:[{url:"https://cdn.freesound.org/previews/216/216878_4049088-hq.mp3",titulo:"Squeaky door opened quickly",autor:"CastIronCarousel",link:"https://freesound.org/people/CastIronCarousel/sounds/216878"},
+         {url:"https://cdn.freesound.org/previews/219/219492_4056007-hq.mp3",titulo:"Door - Creak 02",autor:"JarredGibb",link:"https://freesound.org/people/JarredGibb/sounds/219492"}],
+  portao:[{url:"https://cdn.freesound.org/previews/537/537832_6911631-hq.mp3",titulo:"spooky garage door open",autor:"PostProdDog",link:"https://freesound.org/people/PostProdDog/sounds/537832",max:11}]
+};
+function urlOpts(id){const s=slotOf(id);if(s&&s.url)return[{url:s.url,titulo:s.titulo,autor:s.autor,link:s.link,max:s.max}];if(s&&s.semPadrao)return[];return SOM_PADRAO[id]||[]}
+function fadeAudio(a,to,ms,cb){const from=a.volume,t0=performance.now();(function f(){const k=Math.min(1,(performance.now()-t0)/ms);try{a.volume=Math.max(0,Math.min(1,from+(to-from)*k))}catch(e){}if(k<1)requestAnimationFrame(f);else cb&&cb()})()}
+function playUrl(o,vol){const a=new Audio(o.url);a.crossOrigin=null;a.volume=Math.min(1,vol);a.play().catch(()=>{});if(o.max){setTimeout(()=>fadeAudio(a,0,1200,()=>a.pause()),o.max*1000)}return a}
+
 function sonsList(){if(!Array.isArray(PUB.sons)||!PUB.sons.length)PUB.sons=JSON.parse(JSON.stringify(BUILTIN_SONS));return PUB.sons}
 function slotOf(id){return sonsList().find(s=>s.id===id)}
 function normAmb(x){x=x||{};const loops=Object.assign({},x.loops||{});if(x.chuva)loops.chuva=true;return{loops,forte:!!x.forte}}
@@ -1721,6 +1745,7 @@ async function playSom(id){
   if(!soundOn())return;const s=slotOf(id);const vol=s&&s.vol!=null?s.vol:1;
   let buf=null;try{buf=await getSndBuf(id)}catch(e){buf=null}
   if(buf){const ac=audio();const src=ac.createBufferSource();src.buffer=buf;const g=ac.createGain();g.gain.value=vol;src.connect(g).connect(ac.destination);src.start();return}
+  const opts=urlOpts(id);if(opts.length){playUrl(opts[Math.floor(Math.random()*opts.length)],vol);return}
   try{if(SND[id])SND[id]()}catch(e){}
 }
 async function startLoop(id){
@@ -1728,17 +1753,20 @@ async function startLoop(id){
   LOOPS[id]={pending:true};let buf=null;try{buf=await getSndBuf(id)}catch(e){buf=null}
   if(!LOOPS[id])return;
   if(buf){const src=ac.createBufferSource();src.buffer=buf;src.loop=true;const g=ac.createGain();g.gain.value=0;g.gain.setTargetAtTime(vol,ac.currentTime,.8);src.connect(g).connect(ac.destination);src.start();LOOPS[id]={src,g,at:SARQ[id].at};return}
+  const opts=urlOpts(id);
+  if(opts.length){const a=new Audio(opts[0].url);a.loop=true;a.volume=0;a.play().catch(()=>{});fadeAudio(a,Math.min(1,vol),1500);LOOPS[id]={el:a,url:opts[0].url};return}
   if(id==="chuva"){startRain(AMB.forte);LOOPS[id]={synth:true};return}
   delete LOOPS[id];
 }
-function stopLoop(id){const L=LOOPS[id];if(!L)return;delete LOOPS[id];if(L.synth){stopRain();return}if(L.src&&AC){L.g.gain.setTargetAtTime(0,AC.currentTime,.7);const s=L.src;setTimeout(()=>{try{s.stop()}catch(e){}},3500)}}
+function stopLoop(id){const L=LOOPS[id];if(!L)return;delete LOOPS[id];if(L.synth){stopRain();return}if(L.el){const a=L.el;fadeAudio(a,0,1500,()=>a.pause());return}if(L.src&&AC){L.g.gain.setTargetAtTime(0,AC.currentTime,.7);const s=L.src;setTimeout(()=>{try{s.stop()}catch(e){}},3500)}}
 function applyAmbient(){
   const active=role==="jogador"||(role==="mestre"&&unlocked);const want=soundOn()&&active?(AMB.loops||{}):{};
   Object.keys(LOOPS).forEach(id=>{if(!want[id])stopLoop(id)});
   Object.keys(want).forEach(id=>{if(!want[id])return;const L=LOOPS[id];
     if(L&&L.at&&SARQ[id]&&SARQ[id].at!==L.at){stopLoop(id)}
-    if(L&&L.synth&&SARQ[id]){stopLoop(id)}
-    if(!LOOPS[id])startLoop(id);else if(L&&L.g&&AC){const s=slotOf(id);L.g.gain.setTargetAtTime(s&&s.vol!=null?s.vol:1,AC.currentTime,.3)}});
+    if(L&&L.synth&&(SARQ[id]||urlOpts(id).length)){stopLoop(id)}
+    if(L&&L.el&&(SARQ[id]||(urlOpts(id)[0]||{}).url!==L.url)){stopLoop(id)}
+    if(!LOOPS[id])startLoop(id);else if(L&&L.g&&AC){const s=slotOf(id);L.g.gain.setTargetAtTime(s&&s.vol!=null?s.vol:1,AC.currentTime,.3)}else if(L&&L.el){const s=slotOf(id);try{L.el.volume=Math.min(1,s&&s.vol!=null?s.vol:1)}catch(e){}}});
   if(LOOPS.chuva&&LOOPS.chuva.synth)startRain(AMB.forte);
 }
 function onSom(x){
@@ -1758,13 +1786,14 @@ function ambMasterInner(){
     return`<div class="sndr ${on?"on":""}">
       ${s.loop?`<button class="b ${on?"on":""}" data-act="sndLoop" data-id="${s.id}" title="${on?"parar":"ligar em loop"}">${on?"⏹":"▶"}</button>`:`<button class="b" data-act="sndPlay" data-id="${s.id}" title="tocar">▶</button>`}
       <div class="sn">${s.builtin?`<b>${esc(s.nome)}</b>`:`<input type="text" data-sndnome="${s.id}" value="${esc(s.nome)}">`}
-        <small>${s.loop?"ambiente, repete":"toca uma vez"} · ${arq?"<span style='color:var(--good)'>arquivo próprio</span>":s.builtin?"sintetizado":"<span style='color:var(--warn)'>sem arquivo</span>"}</small></div>
+        <small>${s.loop?"ambiente, repete":"toca uma vez"} · ${arq?"<span style='color:var(--good)'>arquivo próprio</span>":urlOpts(s.id).length?`<span style='color:#8fb3e8'>gravado: ${esc(urlOpts(s.id).map(o=>o.titulo).join(" / ").slice(0,60))}</span>`:s.builtin?"sintetizado":"<span style='color:var(--warn)'>sem som</span>"}</small></div>
       <select data-sndvol="${s.id}" title="volume">${[[.3,"baixo"],[.6,"médio"],[.8,"alto"],[1,"máximo"]].map(([v,n])=>`<option value="${v}" ${Math.abs((s.vol??1)-v)<.01?"selected":""}>${n}</option>`).join("")}</select>
+      <button class="b" data-act="sndBusca" data-id="${s.id}" title="buscar sons gravados no Openverse">🔎 Openverse</button>
       <label class="b upl" title="enviar arquivo de áudio">${arq?"Trocar":"Enviar"} arquivo<input type="file" accept="audio/*" data-sndup="${s.id}" hidden></label>
       ${arq?`<button class="clr" data-act="sndDelArq" data-id="${s.id}" title="remover arquivo">✕ arquivo</button>`:""}
       ${!s.builtin?`<button class="clr" data-act="sndDel" data-id="${s.id}" title="apagar som">apagar</button>`:""}
     </div>`}).join("")}</div>
-  ${(AMB.loops||{}).chuva&&!(SARQ.chuva&&SARQ.chuva.data)?`<div class="btnrow" style="margin-top:6px"><button class="b ${AMB.forte?"on":""}" data-act="sndForte">Chuva sintetizada: ${AMB.forte?"tempestade":"garoa"} · trocar</button></div>`:""}
+  ${(AMB.loops||{}).chuva&&!(SARQ.chuva&&SARQ.chuva.data)&&!urlOpts("chuva").length?`<div class="btnrow" style="margin-top:6px"><button class="b ${AMB.forte?"on":""}" data-act="sndForte">Chuva sintetizada: ${AMB.forte?"tempestade":"garoa"} · trocar</button></div>`:""}
   <div class="row"><input type="text" id="sndNovo" placeholder="Novo som — ex.: Trovão, Passos, Alarme" style="flex:1;padding:6px 8px"><label class="toggle" style="font-size:12px;color:var(--mut)"><input type="checkbox" id="sndNovoLoop"> repetir</label><button class="b" data-act="sndAdd">+ Adicionar</button></div>
   <div class="small" style="margin-top:6px">Sons que repetem tocam para todos até você parar. Os outros vão para quem estiver em “Quem”. Arquivos MP3, OGG ou WAV de até 2 MB.</div>`;
 }
@@ -1784,7 +1813,7 @@ document.addEventListener("input",e=>{const t=e.target;if(!(role==="mestre"&&unl
 document.addEventListener("pointerdown",()=>{setTimeout(applyAmbient,50)},{once:true});
 document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(!t)return;const a=t.dataset.act;
   if(a==="som"){setTimeout(applyAmbient,30);return}
-  if(!(role==="mestre"&&unlocked)||!/^snd/.test(a))return;e.stopImmediatePropagation();const id=t.dataset.id;
+  if(!(role==="mestre"&&unlocked)||!/^snd/.test(a))return;if(a==="sndBusca"){e.stopImmediatePropagation();openOv(t.dataset.id);return}e.stopImmediatePropagation();const id=t.dataset.id;
   if(a==="sndPlay"){sendSom(id);return}
   if(a==="sndLoop"){const on=!(AMB.loops||{})[id];const loops=Object.assign({},AMB.loops);if(on)loops[id]=true;else delete loops[id];setAmbiente({loops});const s=slotOf(id);diary(`${on?"Começa":"Para"}: ${s?s.nome:id}`,"efeito");return}
   if(a==="sndForte"){setAmbiente({forte:!AMB.forte});return}
@@ -1795,6 +1824,30 @@ document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(
     PUB.sons=sonsList().filter(s=>s.id!==id);const loops=Object.assign({},AMB.loops);delete loops[id];setAmbiente({loops});savePub();if(!LOCAL()&&fdb)fdb.ref("publico/sonsArq/"+id).remove().catch(()=>{});else{delete SARQ[id]}refreshSndBox();return}
 },true);
 
+/* Openverse search (runs in the master's browser) */
+const OV_SUG={chuva:"rain loop",zumbi:"zombie groan",porta:"door creak",portao:"garage door opening"};
+let ovSlot=null, ovPrev=null;
+function openOv(id){ovSlot=id;const s=slotOf(id);$("#ovT").textContent="Buscar som: "+(s?s.nome:"");$("#ovQ").value=OV_SUG[id]||(s?s.nome:"");$("#ovR").innerHTML="";$("#ovM").textContent="Busque em inglês. Só aparecem sons de uso livre (CC0 / domínio público).";$("#ovModal").classList.add("on");ovSearch()}
+function closeOv(){$("#ovModal").classList.remove("on");if(ovPrev){ovPrev.pause();ovPrev=null}}
+async function ovSearch(){
+  const q=$("#ovQ").value.trim();if(!q)return;$("#ovR").innerHTML=`<div class="small">Buscando…</div>`;
+  try{const r=await fetch(`https://api.openverse.org/v1/audio/?q=${encodeURIComponent(q)}&license=cc0,pdm&page_size=15`);if(!r.ok)throw new Error(r.status);const j=await r.json();
+    const rs=(j.results||[]).filter(x=>x.url);
+    $("#ovR").innerHTML=rs.length?rs.map((x,i)=>`<div class="ovr"><button class="b" data-ovplay="${i}">▶</button><div class="ovi"><b>${esc(x.title||"sem título")}</b><small>${esc(x.creator||"")} · ${x.duration?Math.round(x.duration/1000)+"s":"?"} · ${esc((x.license||"").toUpperCase())}</small></div><button class="b pri" data-ovuse="${i}">Usar</button></div>`).join(""):`<div class="small">Nada encontrado. Tente outras palavras em inglês.</div>`;
+    $("#ovR")._rs=rs;
+  }catch(e){$("#ovR").innerHTML=`<div class="small" style="color:#ff8a80">Não consegui acessar o Openverse agora. Tente de novo em instantes.</div>`}
+}
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(t.closest&&t.closest("[data-act=sndBusca]")){e.stopImmediatePropagation();if(role==="mestre"&&unlocked)openOv(t.closest("[data-act=sndBusca]").dataset.id);return}
+  const pb=t.closest&&t.closest("[data-ovplay]");if(pb){const x=$("#ovR")._rs[pb.dataset.ovplay];if(ovPrev){ovPrev.pause();document.querySelectorAll("[data-ovplay]").forEach(b=>b.textContent="▶");if(ovPrev._i===pb.dataset.ovplay){ovPrev=null;return}}
+    ovPrev=new Audio(x.url);ovPrev._i=pb.dataset.ovplay;ovPrev.play().then(()=>{pb.textContent="⏸"}).catch(()=>{pb.textContent="✕";toast("Esse som não toca aqui. Escolha outro.")});ovPrev.onended=()=>{pb.textContent="▶"};return}
+  const ub=t.closest&&t.closest("[data-ovuse]");if(ub){const x=$("#ovR")._rs[ub.dataset.ovuse];const s=slotOf(ovSlot);if(!s)return;
+    s.url=x.url;s.titulo=(x.title||"").slice(0,60);s.autor=(x.creator||"").slice(0,40);s.link=x.foreign_landing_url||"";delete s.semPadrao;delete s.max;savePub();applyAmbient();refreshSndBox();closeOv();toast(`Usando “${s.titulo}” em ${s.nome}.`);return}
+},true);
+
+$("#ovGo").onclick=ovSearch;$("#ovQ").addEventListener("keydown",e=>{if(e.key==="Enter")ovSearch()});$("#ovClose").onclick=closeOv;
+$("#ovDefault").onclick=()=>{const s=slotOf(ovSlot);if(!s)return;delete s.url;delete s.titulo;delete s.autor;delete s.link;delete s.max;savePub();applyAmbient();refreshSndBox();closeOv();toast("Som padrão restaurado.")};
 /* ---------- MAPS ---------- */
 const MCAT={adm:"#6b7280",enf:"#3f72c4",uti:"#c0484a",cir:"#2fa08d",lab:"#6366d1",serv:"#d1a23a",alim:"#d9803a",far:"#3d9d62",rest:"#9b2f2f"};
 const Q={TL:[60,60,390,250],TR:[550,60,390,250],BL:[60,390,390,250],BR:[550,390,390,250]};
