@@ -1723,16 +1723,20 @@ let SARQ={};const decodedSnd={};const LOOPS={};
 /* real recorded defaults (CC0, Freesound via Openverse) */
 const SOM_PADRAO={
   chuva:[{url:"https://cdn.freesound.org/previews/584/584945_1481531-hq.mp3",titulo:"Rain Loop 1",autor:"richwise",link:"https://freesound.org/people/richwise/sounds/584945"}],
-  zumbi:[{url:"https://cdn.freesound.org/previews/559/559558_7817976-hq.mp3",titulo:"Zombie Groan",autor:"ChuckChuckGoof",link:"https://freesound.org/people/ChuckChuckGoof/sounds/559558"},
-         {url:"https://cdn.freesound.org/previews/244/244320_3151690-hq.mp3",titulo:"groaning.mp3",autor:"Philip_Daniels",link:"https://freesound.org/people/Philip_Daniels/sounds/244320"},
-         {url:"https://cdn.freesound.org/previews/463/463721_1106446-hq.mp3",titulo:"Burp Monster Zombie groan moan",autor:"EricsSoundschmiede",link:"https://freesound.org/people/EricsSoundschmiede/sounds/463721"}],
+  zumbi:[{url:"https://cdn.freesound.org/previews/559/559558_7817976-hq.mp3",titulo:"Zombie Groan",autor:"ChuckChuckGoof",link:"https://freesound.org/people/ChuckChuckGoof/sounds/559558"}],
   porta:[{url:"https://cdn.freesound.org/previews/216/216878_4049088-hq.mp3",titulo:"Squeaky door opened quickly",autor:"CastIronCarousel",link:"https://freesound.org/people/CastIronCarousel/sounds/216878"},
          {url:"https://cdn.freesound.org/previews/219/219492_4056007-hq.mp3",titulo:"Door - Creak 02",autor:"JarredGibb",link:"https://freesound.org/people/JarredGibb/sounds/219492"}],
   portao:[{url:"https://cdn.freesound.org/previews/537/537832_6911631-hq.mp3",titulo:"spooky garage door open",autor:"PostProdDog",link:"https://freesound.org/people/PostProdDog/sounds/537832",max:11}]
 };
 function urlOpts(id){const s=slotOf(id);if(s&&s.url)return[{url:s.url,titulo:s.titulo,autor:s.autor,link:s.link,max:s.max}];if(s&&s.semPadrao)return[];return SOM_PADRAO[id]||[]}
 function fadeAudio(a,to,ms,cb){const from=a.volume,t0=performance.now();(function f(){const k=Math.min(1,(performance.now()-t0)/ms);try{a.volume=Math.max(0,Math.min(1,from+(to-from)*k))}catch(e){}if(k<1)requestAnimationFrame(f);else cb&&cb()})()}
-function playUrl(o,vol){const a=new Audio(o.url);a.crossOrigin=null;a.volume=Math.min(1,vol);a.play().catch(()=>{});if(o.max){setTimeout(()=>fadeAudio(a,0,1200,()=>a.pause()),o.max*1000)}return a}
+const ACTIVE={};
+function track(id,stop,endEvt){(ACTIVE[id]=ACTIVE[id]||[]).push(stop);const done=()=>{ACTIVE[id]=(ACTIVE[id]||[]).filter(f=>f!==stop);refreshPlaying()};endEvt(done);refreshPlaying()}
+function stopSom(id){const ids=id==="all"?Object.keys(ACTIVE):[id];ids.forEach(k=>{(ACTIVE[k]||[]).forEach(f=>{try{f()}catch(e){}});ACTIVE[k]=[]});refreshPlaying()}
+function refreshPlaying(){document.querySelectorAll("[data-act=sndStop]").forEach(b=>{const on=(ACTIVE[b.dataset.id]||[]).length>0;b.classList.toggle("pri",on)})}
+function playUrl(o,vol,id){const a=new Audio(o.url);a.crossOrigin=null;a.volume=Math.min(1,vol);a.play().catch(()=>{});let capT=null;
+  if(o.max){capT=setTimeout(()=>fadeAudio(a,0,1200,()=>a.pause()),o.max*1000)}
+  if(id)track(id,()=>{clearTimeout(capT);fadeAudio(a,0,350,()=>{a.pause();a.dispatchEvent(new Event("ended"))})},done=>{a.addEventListener("ended",done,{once:true});a.addEventListener("pause",done,{once:true})});return a}
 
 function sonsList(){if(!Array.isArray(PUB.sons)||!PUB.sons.length)PUB.sons=JSON.parse(JSON.stringify(BUILTIN_SONS));return PUB.sons}
 function slotOf(id){return sonsList().find(s=>s.id===id)}
@@ -1744,8 +1748,9 @@ async function getSndBuf(id){const a=SARQ[id];if(!a||!a.data)return null;const a
 async function playSom(id){
   if(!soundOn())return;const s=slotOf(id);const vol=s&&s.vol!=null?s.vol:1;
   let buf=null;try{buf=await getSndBuf(id)}catch(e){buf=null}
-  if(buf){const ac=audio();const src=ac.createBufferSource();src.buffer=buf;const g=ac.createGain();g.gain.value=vol;src.connect(g).connect(ac.destination);src.start();return}
-  const opts=urlOpts(id);if(opts.length){playUrl(opts[Math.floor(Math.random()*opts.length)],vol);return}
+  if(buf){const ac=audio();const src=ac.createBufferSource();src.buffer=buf;const g=ac.createGain();g.gain.value=vol;src.connect(g).connect(ac.destination);src.start();
+    track(id,()=>{g.gain.setTargetAtTime(0,ac.currentTime,.08);setTimeout(()=>{try{src.stop()}catch(e){}},400)},done=>{src.onended=done});return}
+  const opts=urlOpts(id);if(opts.length){playUrl(opts[Math.floor(Math.random()*opts.length)],vol,id);return}
   try{if(SND[id])SND[id]()}catch(e){}
 }
 async function startLoop(id){
@@ -1772,10 +1777,12 @@ function applyAmbient(){
 function onSom(x){
   if(!x||!x.id||x.id===lastSomId)return;lastSomId=x.id;ls("us-lastsom",x.id);
   if(Date.now()-(x.at||0)>20000)return;if(role==="mestre"&&unlocked)return;if(role!=="jogador"||!myPc)return;
+  if(x.acao==="stop"){stopSom(x.tipo||"all");return}
   if(!(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc))))return;playSom(x.tipo);
 }
 function onAmbiente(x){AMB=normAmb(x);applyAmbient();refreshSndBox()}
 function onSonsArq(v){SARQ=v||{};applyAmbient();refreshSndBox();if(AC)Object.keys(SARQ).forEach(id=>getSndBuf(id).catch(()=>{}))}
+function sendStop(id){stopSom(id);if(LOCAL()||!fdb)return;fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,acao:"stop",alvos:"todos",at:Date.now()})).catch(()=>{})}
 function sendSom(id){playSom(id);if(LOCAL()||!fdb)return;
   fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:pd.alvos,at:Date.now()})).catch(e=>toast("Som não enviado: "+(e&&e.code||"erro")))}
 function setAmbiente(patch){AMB=normAmb(Object.assign({},AMB,patch));applyAmbient();if(!LOCAL()&&fdb)fdb.ref("publico/ambiente").set(clean(AMB)).catch(()=>{});refreshSndBox()}
@@ -1784,7 +1791,7 @@ function ambMasterInner(){
   const L=sonsList();
   return`<div class="sndl">${L.map(s=>{const on=!!(AMB.loops||{})[s.id];const arq=!!(SARQ[s.id]&&SARQ[s.id].data);
     return`<div class="sndr ${on?"on":""}">
-      ${s.loop?`<button class="b ${on?"on":""}" data-act="sndLoop" data-id="${s.id}" title="${on?"parar":"ligar em loop"}">${on?"⏹":"▶"}</button>`:`<button class="b" data-act="sndPlay" data-id="${s.id}" title="tocar">▶</button>`}
+      ${s.loop?`<button class="b ${on?"on":""}" data-act="sndLoop" data-id="${s.id}" title="${on?"parar":"ligar em loop"}">${on?"⏹":"▶"}</button>`:`<button class="b" data-act="sndPlay" data-id="${s.id}" title="tocar">▶</button><button class="b ${(ACTIVE[s.id]||[]).length?"pri":""}" data-act="sndStop" data-id="${s.id}" title="parar este som para todos">⏹</button>`}
       <div class="sn">${s.builtin?`<b>${esc(s.nome)}</b>`:`<input type="text" data-sndnome="${s.id}" value="${esc(s.nome)}">`}
         <small>${s.loop?"ambiente, repete":"toca uma vez"} · ${arq?"<span style='color:var(--good)'>arquivo próprio</span>":urlOpts(s.id).length?`<span style='color:#8fb3e8'>gravado: ${esc(urlOpts(s.id).map(o=>o.titulo).join(" / ").slice(0,60))}</span>`:s.builtin?"sintetizado":"<span style='color:var(--warn)'>sem som</span>"}</small></div>
       <select data-sndvol="${s.id}" title="volume">${[[.3,"baixo"],[.6,"médio"],[.8,"alto"],[1,"máximo"]].map(([v,n])=>`<option value="${v}" ${Math.abs((s.vol??1)-v)<.01?"selected":""}>${n}</option>`).join("")}</select>
@@ -1794,6 +1801,7 @@ function ambMasterInner(){
       ${!s.builtin?`<button class="clr" data-act="sndDel" data-id="${s.id}" title="apagar som">apagar</button>`:""}
     </div>`}).join("")}</div>
   ${(AMB.loops||{}).chuva&&!(SARQ.chuva&&SARQ.chuva.data)&&!urlOpts("chuva").length?`<div class="btnrow" style="margin-top:6px"><button class="b ${AMB.forte?"on":""}" data-act="sndForte">Chuva sintetizada: ${AMB.forte?"tempestade":"garoa"} · trocar</button></div>`:""}
+  <div class="btnrow" style="margin-top:8px"><button class="b dmg" data-act="sndStopAll">⏹ Parar todos os sons</button><span class="small">corta tudo na hora, inclusive a chuva</span></div>
   <div class="row"><input type="text" id="sndNovo" placeholder="Novo som — ex.: Trovão, Passos, Alarme" style="flex:1;padding:6px 8px"><label class="toggle" style="font-size:12px;color:var(--mut)"><input type="checkbox" id="sndNovoLoop"> repetir</label><button class="b" data-act="sndAdd">+ Adicionar</button></div>
   <div class="small" style="margin-top:6px">Sons que repetem tocam para todos até você parar. Os outros vão para quem estiver em “Quem”. Arquivos MP3, OGG ou WAV de até 2 MB.</div>`;
 }
@@ -1815,6 +1823,8 @@ document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(
   if(a==="som"){setTimeout(applyAmbient,30);return}
   if(!(role==="mestre"&&unlocked)||!/^snd/.test(a))return;if(a==="sndBusca"){e.stopImmediatePropagation();openOv(t.dataset.id);return}e.stopImmediatePropagation();const id=t.dataset.id;
   if(a==="sndPlay"){sendSom(id);return}
+  if(a==="sndStop"){sendStop(id);return}
+  if(a==="sndStopAll"){sendStop("all");if(Object.keys(AMB.loops||{}).length)setAmbiente({loops:{}});return}
   if(a==="sndLoop"){const on=!(AMB.loops||{})[id];const loops=Object.assign({},AMB.loops);if(on)loops[id]=true;else delete loops[id];setAmbiente({loops});const s=slotOf(id);diary(`${on?"Começa":"Para"}: ${s?s.nome:id}`,"efeito");return}
   if(a==="sndForte"){setAmbiente({forte:!AMB.forte});return}
   if(a==="sndAdd"){const n=($("#sndNovo").value||"").trim();if(!n){toast("Dê um nome ao som.");return}sonsList().push({id:"x"+Date.now().toString(36),nome:n.slice(0,40),loop:$("#sndNovoLoop").checked,vol:1});savePub();refreshSndBox();return}
