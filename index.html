@@ -1332,7 +1332,7 @@ function migrateNames(){
   Object.values(MPISTAS||{}).forEach(x=>{x.titulo=fix(x.titulo);x.texto=fix(x.texto)});
   PRIV.mig=Object.assign({},PRIV.mig,{breno:true});return true;
 }
-function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}renderAll()}
+function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}renderAll()}
 $("#pinOk").onclick=pinSubmit;$("#pinCancel").onclick=()=>$("#pinModal").classList.remove("on");
 ["#pinIn","#pinIn2"].forEach(s=>$(s).addEventListener("keydown",e=>{if(e.key==="Enter")pinSubmit()}));
 $("#trayHd").onclick=()=>{const t=$("#tray");t.classList.toggle("min");$("#trayTog").textContent=t.classList.contains("min")?"abrir":"recolher"};
@@ -1974,6 +1974,36 @@ function floorSVG(id){
   s+=F.rooms.map(roomSVG).join("")+`</svg>`;return s;
 }
 
+/* story tokens of session 1: placed hidden, revealed with one click */
+const STORY_TOKENS=[
+  {k:"st_comum1",s:"sp",x:.49,y:.345,t:"en",ek:"comum",nome:"Infectado comum 1",cena:"Cena 4 · prédio abandonado"},
+  {k:"st_comum2",s:"sp",x:.55,y:.30,t:"en",ek:"comum",nome:"Infectado comum 2",cena:"Cena 4 · prédio abandonado"},
+  {k:"st_comum3",s:"sp",x:.565,y:.39,t:"en",ek:"comum",nome:"Infectado comum 3",cena:"no caminho, perto do hospital"},
+  {k:"st_corredor",s:"ext",x:.22,y:.47,t:"en",ek:"corredor",nome:"Corredor",cena:"Cena 4/5 · se ignoraram o prédio"},
+  {k:"st_semrosto",s:"t",x:.38,y:.44,t:"npc",ref:"semrosto",nome:"O Sem-Rosto",cena:"Cena 7 · corredor da recepção",fx:"semrosto"},
+  {k:"st_eco",s:"t",x:.16,y:.8,t:"en",ek:"eco",nome:"Primeiro Eco",ref:"eco",cena:"Cena 8 · sala de emergência",fx:"falha",som:"sussurros"}
+];
+function seedStoryTokens(){if(PRIV.mig&&PRIV.mig.tok1)return;const M=mapState();
+  STORY_TOKENS.forEach(d=>{if(M.tokens[d.k])return;M.tokens[d.k]={s:d.s,x:d.x,y:d.y,t:d.t,ref:d.ref||null,nome:d.nome,ek:d.ek||null,cena:d.cena,fx:d.fx||null,som:d.som||null,vis:false}});
+  PRIV.mig=Object.assign({},PRIV.mig,{tok1:true});syncMapPub();savePub();savePriv()}
+function fxTodos(tipo){if(LOCAL()||!fdb)return;fdb.ref("publico/fx").set(clean({id:"f"+Date.now().toString(36),tipo,alvos:"todos",texto:"",at:Date.now()})).catch(()=>{})}
+function somTodos(id){try{playSom(id)}catch(e){}if(LOCAL()||!fdb)return;fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:"todos",at:Date.now()})).catch(()=>{})}
+/* what happens when the master reveals a token: enemies join the combat list, horror effects fire */
+function onReveal(keys){const M=mapState();let fx=null,som=null,novos=[];
+  keys.forEach(k=>{const v=M.tokens[k];if(!v||v.t==="pc")return;
+    if(v.t==="en"){const tp=ENEMIES[v.ek]||null;if(tp&&!(PRIV.enemies||[]).some(e=>e.nome===v.nome)){(PRIV.enemies=PRIV.enemies||[]).push({k:v.ek,nome:v.nome,atq:tp.atq,def:tp.def,hp:tp.hp,hpMax:tp.hp,dano:tp.dano,nota:tp.nota,ini:tp.ini});novos.push(v.nome)}
+      if(!som)som=v.som||"zumbi"}
+    if(v.fx&&!fx)fx=v.fx;if(v.som&&v.t!=="en"&&!som)som=v.som;
+    diary(`Apareceu no mapa: ${tokenInfo(k,v).nome}`,"combate")});
+  if(fx)fxTodos(fx);if(som)setTimeout(()=>somTodos(som),fx==="semrosto"?0:150);
+  if(novos.length)toast(`${novos.join(", ")} ${novos.length>1?"entraram":"entrou"} em NPCs & Combate.`)}
+function hiddenTokensHTML(){const id=currentScene(),M=mapState();const ts=Object.entries(M.tokens).filter(([k,v])=>v.s===id&&v.t!=="pc");
+  if(!ts.length)return"";
+  return`<div class="card"><h3>NPCs e inimigos desta cena</h3>${ts.map(([k,v])=>{const I=tokenInfo(k,v);const tp=v.t==="en"&&ENEMIES[v.ek];
+    return`<div class="mkrow"><span>${v.t==="en"?"☠":"👤"}</span><span style="flex:1"><b style="color:#fff">${esc(I.nome)}</b>${v.cena?` <span class="small">· ${esc(v.cena)}</span>`:""}${tp?`<br><span class="small">Atq +${tp.atq} · Def ${tp.def} · PV ${tp.hp} · ${esc(tp.dano)}</span>`:""}${v.fx==="semrosto"?`<br><span class="small" style="color:#e0a030">ao revelar: rosto vazio piscando para todos</span>`:v.fx?`<br><span class="small" style="color:#e0a030">ao revelar: efeito de horror</span>`:""}</span>
+    <button class="b ${v.vis?"":"pri"}" data-act="mapTkToggle" data-k="${k}">${v.vis?"Ocultar":"Revelar"}</button></div>`}).join("")}
+    <div class="small" style="margin-top:6px">Ao revelar um inimigo, ele entra sozinho na lista de NPCs &amp; Combate e os jogadores ouvem o som. Depois é só usar “Iniciar combate”.</div></div>`}
+
 /* map state helpers */
 function mapState(){if(!PRIV.mapa||typeof PRIV.mapa!=="object")PRIV.mapa={tokens:{},marks:{}};if(!PRIV.mapa.tokens)PRIV.mapa.tokens={};if(!PRIV.mapa.marks)PRIV.mapa.marks={};
   const T=PRIV.mapa.tokens;let added=false;PCS.forEach((p,i)=>{if(!T["pc_"+p.id]){T["pc_"+p.id]={s:"sp",x:.14+(i%3)*.035,y:.33+Math.floor(i/3)*.06,t:"pc",ref:p.id,vis:true};added=true}});if(added)syncMapPub();return PRIV.mapa}
@@ -1985,7 +2015,7 @@ function viewMap(){return role==="mestre"&&unlocked?mapState():(PUB.mapa||{token
 function tokenInfo(k,v){
   if(v.t==="pc"&&PCMAP[v.ref])return{nome:PCMAP[v.ref].nome,cor:PCMAP[v.ref].cor,img:IMG[v.ref]};
   if(v.t==="npc"){const n=(PRIV.npcs||[]).find(x=>x.id===v.ref);const nome=v.nome||(n&&n.nome)||"NPC";return{nome,cor:"#b9b4ab",img:IMG[v.ref]||null}}
-  return{nome:v.nome||"Inimigo",cor:"#d64541",img:null,enemy:1};
+  return{nome:v.nome||"Inimigo",cor:"#d64541",img:(v.ref&&IMG[v.ref])||null,enemy:1};
 }
 let mapScene=null, mapSel=new Set(), mapMode=null, mapDrag=null, mapOpenMark=null;
 function myScene(){const M=viewMap();const t=M.tokens&&M.tokens["pc_"+myPc];return t?t.s:"sp"}
@@ -2041,7 +2071,7 @@ function marksListHTML(){
 }
 function renderMapMaster(){
   mapState();
-  return`<div class="mapmaster">${sceneNav(true)}<div class="mgrid2"><div>${mapCanvasHTML(true)}</div><div class="stack">${selPanelHTML()}<div id="mkpanel">${markPanelHTML(true)}</div>${marksListHTML()}</div></div></div>`;
+  return`<div class="mapmaster">${sceneNav(true)}<div class="mgrid2"><div>${mapCanvasHTML(true)}</div><div class="stack">${selPanelHTML()}<div id="mkpanel">${markPanelHTML(true)}</div>${hiddenTokensHTML()}${marksListHTML()}</div></div></div>`;
 }
 function renderMapPlayer(){
   const id=currentScene(),S=SCMAP[id];const mine=myScene();
@@ -2097,9 +2127,10 @@ function mapAction(a,t){
     case"mapSelNone":mapSel.clear();refreshMapView();return true;
     case"mapMove":{const dest=$("#mapDest").value,S=SCMAP[dest];const ks=[...mapSel].filter(k=>M.tokens[k]);ks.forEach((k,i)=>{M.tokens[k].s=dest;M.tokens[k].x=clamp(S.spawn[0]+(i%3-1)*.055,0,1);M.tokens[k].y=clamp(S.spawn[1]+Math.floor(i/3)*.085,0,1)});
       mapScene=dest;PRIV.mapScene=dest;diary(`${ks.map(k=>tokenInfo(k,M.tokens[k]).nome).join(", ")} → ${S.grupo==="Hospital"?"Hospital, ":""}${S.nome}`,"auto");done();return true}
-    case"mapVis":{const ks=[...mapSel].filter(k=>M.tokens[k]&&M.tokens[k].t!=="pc");const show=!ks.every(k=>M.tokens[k].vis);ks.forEach(k=>M.tokens[k].vis=show);done();return true}
+    case"mapVis":{const ks=[...mapSel].filter(k=>M.tokens[k]&&M.tokens[k].t!=="pc");const show=!ks.every(k=>M.tokens[k].vis);ks.forEach(k=>M.tokens[k].vis=show);done();if(show)onReveal(ks);return true}
+    case"mapTkToggle":{const k=t.dataset.k;if(!M.tokens[k])return true;M.tokens[k].vis=!M.tokens[k].vis;done();if(M.tokens[k].vis)onReveal([k]);return true}
     case"mapDelTok":[...mapSel].forEach(k=>{if(M.tokens[k]&&M.tokens[k].t!=="pc")delete M.tokens[k]});mapSel.clear();done();return true;
-    case"mapAddNpc":{const id=$("#mapNpc").value;if(!id){toast("Escolha um NPC.");return true}const S=SCMAP[currentScene()];const k="npc_"+id+"_"+Date.now().toString(36);M.tokens[k]={s:S.id,x:S.spawn[0]+.05,y:S.spawn[1],t:"npc",ref:id,vis:false};mapSel=new Set([k]);done();toast("NPC colocado oculto. Mostre quando aparecer.");return true}
+    case"mapAddNpc":{const id=$("#mapNpc").value;if(!id){toast("Escolha um NPC.");return true}const S=SCMAP[currentScene()];const k="npc_"+id+"_"+Date.now().toString(36);M.tokens[k]={s:S.id,x:S.spawn[0]+.05,y:S.spawn[1],t:"npc",ref:id,vis:false,fx:id==="semrosto"?"semrosto":id==="eco"?"falha":null,som:id==="eco"?"sussurros":null};mapSel=new Set([k]);done();toast("NPC colocado oculto. Mostre quando aparecer.");return true}
     case"mapAddEnemies":{const S=SCMAP[currentScene()];const es=(PRIV.enemies||[]).filter(e=>e.hp>0&&!Object.values(M.tokens).some(v=>v.t==="en"&&v.nome===e.nome));if(!es.length){toast("Nenhum inimigo novo em cena. Adicione em NPCs & Combate.");return true}
       es.forEach((en,i)=>{M.tokens["en_"+Date.now().toString(36)+i]={s:S.id,x:clamp(S.spawn[0]+.12+(i%4)*.03,0,1),y:clamp(S.spawn[1]-.1+Math.floor(i/4)*.05,0,1),t:"en",nome:en.nome,vis:false}});done();toast("Inimigos colocados ocultos.");return true}
     case"mapMarkMode":mapMode=mapMode==="mark"?null:"mark";refreshMapView();return true;
