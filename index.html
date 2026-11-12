@@ -534,6 +534,7 @@ const ENEMIES={
  saqueador:{nome:"Saqueador",atq:3,def:12,hp:14,dano:"1D6/1D8",nota:"humano",ini:2},
  militar:{nome:"Militar",atq:5,def:14,hp:18,dano:"1D10",nota:"colete RD 2",ini:3}
 };
+const SAN_MIN=50;
 const SAN_FAIXAS=[[50,"Lúcido","sem efeito"],[30,"Inquieto","pesadelos; uma noite segura deixa o Medo em 1 em vez de zerar"],[15,"Perturbado","−1 em Vontade e Intelecto; o mestre pode mostrar visões só para você"],[5,"Fragmentado","−2 em Vontade e Intelecto; falhar num teste de Medo dá +1 Medo extra"],[1,"À beira","−3 em Vontade e Intelecto; ganhe um Trauma permanente; o Sinal fala com você"],[0,"Perdido","a mente se entrega: o personagem vira do mestre até ser resgatado"]];
 function sanFaixa(c){if(c.san==null)return null;const v=Number(c.san);return SAN_FAIXAS.find(f=>v>=f[0])||SAN_FAIXAS[SAN_FAIXAS.length-1]}
 function sanPen(c){if(c.san==null)return 0;const v=Number(c.san);return v<5?3:v<15?2:v<30?1:0}
@@ -756,7 +757,7 @@ function applyEffects(r){
   }
   if(fearEffect(r))changed=true;
   const c=PUB.pcs[r.pc];
-  if(c&&r.kind==="sanidade"&&c.san==null){c.san=r.total;c.sanMax=r.total;diary(`${PCMAP[r.pc].nome} rolou Sanidade: ${r.total}`,"medo");changed=true}
+  if(c&&r.kind==="sanidade"&&c.san==null){const v=Math.max(SAN_MIN,Number(r.total)||0);c.san=v;c.sanMax=v;diary(`${PCMAP[r.pc].nome} rolou Sanidade: ${r.total}`,"medo");changed=true}
   if(c&&r.dice==="D20"&&(r.nat===20||r.nat===1)&&["teste","ataque"].includes(r.kind))diary(`${PCMAP[r.pc].nome}: ${r.nat===20?"crítico":"falha crítica"} em ${r.label}`,"critico");
   if(c){
     if(r.kind==="morte"&&c.hp<=0&&!c.estavel&&c.falhas<3){
@@ -842,9 +843,9 @@ function rollFree(f,q){
 }
 function rollSan(){
   const c=PUB.pcs[myPc];const ped=PUB.pedido&&pedidoForMe()&&PUB.pedido.attr==="san"?PUB.pedido:null;const r=d(100);
-  const roll=newRoll({pc:myPc,label:"Sanidade inicial",dice:"D100",raw:[r],mod:0,total:r,kind:"sanidade",pedido:ped?ped.id:undefined});
-  if(c.san==null&&LOCAL()){c.san=r;c.sanMax=r}
-  showResult(roll,`sua Sanidade começa em ${r}`);emitRoll(roll);renderView();
+  const tot=Math.max(SAN_MIN,r);const roll=newRoll({pc:myPc,label:"Sanidade inicial",dice:"D100",raw:[r],mod:0,total:tot,kind:"sanidade",pedido:ped?ped.id:undefined});
+  if(c.san==null&&LOCAL()){c.san=tot;c.sanMax=tot}
+  showResult(roll,r<SAN_MIN?`tirou ${r}; o mínimo é ${SAN_MIN}, então sua Sanidade começa em ${tot}`:`sua Sanidade começa em ${tot}`);emitRoll(roll);renderView();
 }
 function rollDeath(){
   const r=d(20);const roll=newRoll({pc:myPc,label:"Teste de morte",dice:"D20",raw:[r],mod:0,total:r,nat:r,kind:"morte"});
@@ -956,7 +957,7 @@ function renderPlayer(){
     const done=answeredPedido();
     const lbl=ped.attr==="livre"?"":ped.attr==="san"?"Sanidade inicial":`Teste de ${ANAME[ped.attr]}`;
     pedHTML=`<div class="pedido" style="--c:${p.cor}"><div class="t">O mestre pediu</div><div class="q">${esc(lbl)}${ped.dif!=null?` · DIF ${ped.dif}`:""}</div>${ped.texto?`<div class="small" style="margin:-6px 0 10px">${esc(ped.texto)}</div>`:""}
-      ${ped.attr==="san"?`<button class="big" data-act="sanRoll" ${done||c.san!=null?"disabled":""}>${done||c.san!=null?"Você já rolou ✓":"Rolar Sanidade"}<small>D100 · o resultado é a sua Sanidade</small></button>`:ped.attr!=="livre"?`<button class="big" data-act="pedRoll" ${done?"disabled":""}>${done?"Você já rolou ✓":`Rolar ${ANAME[ped.attr]}`}<small>D20 ${attrMod(c,ped.attr)>=0?"+":"−"} ${Math.abs(attrMod(c,ped.attr))}${nextSpec?" +2 esp.":""}${nextBonus?` ${nextBonus>0?"+":""}${nextBonus} bônus`:""}</small></button>`:""}</div>`;
+      ${ped.attr==="san"?`<button class="big" data-act="sanRoll" ${done||c.san!=null?"disabled":""}>${done||c.san!=null?"Você já rolou ✓":"Rolar Sanidade"}<small>D100 · mínimo 50 · o resultado é a sua Sanidade</small></button>`:ped.attr!=="livre"?`<button class="big" data-act="pedRoll" ${done?"disabled":""}>${done?"Você já rolou ✓":`Rolar ${ANAME[ped.attr]}`}<small>D20 ${attrMod(c,ped.attr)>=0?"+":"−"} ${Math.abs(attrMod(c,ped.attr))}${nextSpec?" +2 esp.":""}${nextBonus?` ${nextBonus>0?"+":""}${nextBonus} bônus`:""}</small></button>`:""}</div>`;
   }
   let dying="";
   if(st==="down")dying=`<div class="pedido" style="--c:#e0a030;border-color:#e0a030"><div class="t" style="color:#e0a030">Você está morrendo</div><div class="q">Falhas: ${c.falhas}/3</div><button class="big" style="background:#e0a030" data-act="deathRoll">Rolar teste de morte<small>D20 · 10+ resiste · natural 20 volta com 1 PV</small></button></div>`;
@@ -1258,7 +1259,7 @@ const RULES=`<div class="rules">
 
 <section id="r-sanidade">
 <h2>9b. Sanidade <span class="new">NOVO</span></h2>
-<p>No <b>primeiro contato com o horror cósmico</b> o mestre pede a Sanidade inicial: cada jogador rola <b>1D100</b> e o resultado é a Sanidade do personagem. Ela só desce; é o desgaste da mente, enquanto o Medo é o susto do momento.</p>
+<p>No <b>primeiro contato com o horror cósmico</b> o mestre pede a Sanidade inicial: cada jogador rola <b>1D100</b> e o resultado é a Sanidade do personagem, com <b>mínimo de 50</b>: todo mundo começa Lúcido. Ela só desce; é o desgaste da mente, enquanto o Medo é o susto do momento.</p>
 <p><b>Perda:</b> em testes de Medo de horror cósmico (DIF 14) perde 1 se passar e <b>1D6</b> se falhar; no impossível (DIF 17), 1 ou <b>1D10</b>. Falha crítica perde o máximo; natural 20 não perde nada. O mestre também pode tirar Sanidade por cenas marcantes.</p>
 <table><thead><tr><th>Sanidade</th><th>Estado</th><th>Efeito</th></tr></thead><tbody>
 <tr><td>50+</td><td>Lúcido</td><td>Sem efeito</td></tr>
