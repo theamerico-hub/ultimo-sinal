@@ -377,7 +377,7 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .tk span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-size:11px;font-weight:600;white-space:nowrap;background:rgba(0,0,0,.75);padding:0 5px;border-radius:4px;color:#fff;pointer-events:none}
 .tk.en{border-radius:8px;background:#2a0f0f}.tk.en img{border-radius:6px}
 .tk.sel{outline:3px solid #fff;outline-offset:2px;z-index:5}
-.tk.me{animation:tkme 1.6s ease-in-out infinite;z-index:4}
+.tk.me{animation:tkme 1.6s ease-in-out infinite;z-index:4;cursor:grab}
 @keyframes tkme{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
 .tk.hid{opacity:.55;border-style:dashed}.mk.hid{opacity:.6}
 .mk{position:absolute;transform:translate(-50%,-50%) scale(var(--iz,1));z-index:2;display:flex;align-items:center;gap:4px;cursor:pointer}
@@ -534,6 +534,9 @@ const ENEMIES={
  saqueador:{nome:"Saqueador",atq:3,def:12,hp:14,dano:"1D6/1D8",nota:"humano",ini:2},
  militar:{nome:"Militar",atq:5,def:14,hp:18,dano:"1D10",nota:"colete RD 2",ini:3}
 };
+const SAN_FAIXAS=[[50,"Lúcido","sem efeito"],[30,"Inquieto","pesadelos; uma noite segura deixa o Medo em 1 em vez de zerar"],[15,"Perturbado","−1 em Vontade e Intelecto; o mestre pode mostrar visões só para você"],[5,"Fragmentado","−2 em Vontade e Intelecto; falhar num teste de Medo dá +1 Medo extra"],[1,"À beira","−3 em Vontade e Intelecto; ganhe um Trauma permanente; o Sinal fala com você"],[0,"Perdido","a mente se entrega: o personagem vira do mestre até ser resgatado"]];
+function sanFaixa(c){if(c.san==null)return null;const v=Number(c.san);return SAN_FAIXAS.find(f=>v>=f[0])||SAN_FAIXAS[SAN_FAIXAS.length-1]}
+function sanPen(c){if(c.san==null)return 0;const v=Number(c.san);return v<5?3:v<15?2:v<30?1:0}
 const MEDO=["Calmo","Nervoso — só interpretação","Abalado — −1 em ataques","Em pânico — −1 em tudo; jogador escolhe reação","Ruptura — escolha um Trauma; Medo volta a 2"];
 const INFEC=["Limpo","Exposto — sem sintomas","Febre — −1 em todos os testes","Confusão — −2 em tudo; Vontade em tensão","Convulsões — −3 em tudo; não corre","Colonização — personagem perdido (ou…)"];
 const FERIDA=["Nenhum","−1 em Força, Agilidade e Precisão","−2 em Força, Agilidade e Precisão","−3 em Força, Agilidade e Precisão"];
@@ -578,7 +581,7 @@ function hhmm(t){const x=new Date(t);return String(x.getHours()).padStart(2,"0")
 function pcState(c){return c.falhas>=3?"dead":c.hp<=0?(c.estavel?"stab":"down"):"ok"}
 function statusLabel(st){return{ok:["Ativo","st-ok"],down:["Incapacitado — morrendo","st-down"],stab:["Incapacitado — estável","st-stab"],dead:["Morto","st-dead"]}[st]}
 function penalties(c){return{all:(c.infec>=4?3:c.infec>=3?2:c.infec>=2?1:0)+(c.medo>=3?1:0),fis:c.feridas,atk:c.medo===2?1:0}}
-function attrMod(c,k){const p=penalties(c);return Number(c[k])-p.all-(["forca","agil","prec"].includes(k)?p.fis:0)}
+function attrMod(c,k){const p=penalties(c);return Number(c[k])-p.all-(["forca","agil","prec"].includes(k)?p.fis:0)-(["vont","intel"].includes(k)?sanPen(c):0)}
 function outcome(total,dif,nat){
   if(nat===20)return["SUCESSO CRÍTICO","oc-ex"];if(nat===1)return["FALHA CRÍTICA","oc-f"];
   if(dif===null||dif===undefined||dif==="")return null;
@@ -629,11 +632,18 @@ function setConn(){
   el.innerHTML=`<i></i>${connected?`na mesa · ${n} conectado${n===1?"":"s"}`:"reconectando…"}`;
 }
 
-let onlineRef=null;
+let onlineRef=null, myMove=null;
+function sendMyMove(s,x,y){myMove={pc:myPc,s,x:+x.toFixed(4),y:+y.toFixed(4),at:Date.now()};updateOnline()}
+/* master applies players' own moves (sent through their presence entry) */
+const MV_DONE={};
+function applyPlayerMoves(){if(!(role==="mestre"&&unlocked)||PUB.livreMov===false)return;const M=mapState();let ch=false;
+  Object.values(ONLINE||{}).forEach(o=>{const m=o&&o.mv;if(!m||!o.pc||m.pc!==o.pc)return;if(Date.now()-(m.at||0)>60000)return;if((MV_DONE[o.pc]||0)>=m.at)return;MV_DONE[o.pc]=m.at;
+    const tk=M.tokens["pc_"+o.pc];if(!tk||tk.s!==m.s)return;tk.x=clamp(Number(m.x)||0,0,1);tk.y=clamp(Number(m.y)||0,0,1);ch=true});
+  if(ch){syncMapPub();savePub();savePriv();refreshMap()}}
 function updateOnline(){
   if(!fdb)return;
   if(!onlineRef){onlineRef=fdb.ref("online/"+clientId);onlineRef.onDisconnect().remove()}
-  const v={pc:role==="jogador"?myPc:null,mestre:role==="mestre"&&unlocked?true:null,at:Date.now()};
+  const v={pc:role==="jogador"?myPc:null,mestre:role==="mestre"&&unlocked?true:null,at:Date.now(),mv:role==="jogador"&&myMove&&myMove.pc===myPc?myMove:null};
   onlineRef.set(clean(v)).catch(()=>{});
 }
 const pushPresence=updateOnline;
@@ -646,7 +656,7 @@ function initFirebase(){
   capsReady=true;
   try{fauth.setPersistence(firebase.auth.Auth.Persistence.SESSION)}catch(e){}
   fdb.ref(".info/connected").on("value",s=>{connected=!!s.val();if(connected)updateOnline();setConn()});
-  fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};setConn();renderOnline();if(!role)renderView()});
+  fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};try{applyPlayerMoves()}catch(e){}setConn();renderOnline();if(!role)renderView()});
   fdb.ref("publico").on("value",s=>{const x=s.val();pubSeen=true;setTimeout(()=>{try{ensureSons()}catch(e){}},0);if(x&&x.json&&x.by!==clientId){const old=role==="jogador"&&myPc?myScene():null;try{PUB=mergePub(JSON.parse(x.json))}catch(e){}
     if(old&&myScene()!==old){const S=SCMAP[myScene()];if(S){toast(`${PCMAP[myPc].nome} foi para: ${S.grupo==="Hospital"?"Hospital · ":""}${S.nome}`);mapScene=null}}rerender();try{applyAmbient()}catch(e){}}});
   const q=fdb.ref("rolagens").orderByChild("at").limitToLast(150);
@@ -746,6 +756,7 @@ function applyEffects(r){
   }
   if(fearEffect(r))changed=true;
   const c=PUB.pcs[r.pc];
+  if(c&&r.kind==="sanidade"&&c.san==null){c.san=r.total;c.sanMax=r.total;diary(`${PCMAP[r.pc].nome} rolou Sanidade: ${r.total}`,"medo");changed=true}
   if(c&&r.dice==="D20"&&(r.nat===20||r.nat===1)&&["teste","ataque"].includes(r.kind))diary(`${PCMAP[r.pc].nome}: ${r.nat===20?"crítico":"falha crítica"} em ${r.label}`,"critico");
   if(c){
     if(r.kind==="morte"&&c.hp<=0&&!c.estavel&&c.falhas<3){
@@ -828,6 +839,12 @@ function rollFree(f,q){
   const raw=[];for(let i=0;i<q;i++)raw.push(d(f));const tot=raw.reduce((a,b)=>a+b,0);
   const roll=newRoll({pc:myPc,label:`${q}D${f}`,dice:`${q}D${f}`,raw,mod:0,total:tot,nat:f===20&&q===1?raw[0]:undefined,kind:"livre"});
   showResult(roll,q>1?raw.join(" + "):"");emitRoll(roll);
+}
+function rollSan(){
+  const c=PUB.pcs[myPc];const ped=PUB.pedido&&pedidoForMe()&&PUB.pedido.attr==="san"?PUB.pedido:null;const r=d(100);
+  const roll=newRoll({pc:myPc,label:"Sanidade inicial",dice:"D100",raw:[r],mod:0,total:r,kind:"sanidade",pedido:ped?ped.id:undefined});
+  if(c.san==null&&LOCAL()){c.san=r;c.sanMax=r}
+  showResult(roll,`sua Sanidade começa em ${r}`);emitRoll(roll);renderView();
 }
 function rollDeath(){
   const r=d(20);const roll=newRoll({pc:myPc,label:"Teste de morte",dice:"D20",raw:[r],mod:0,total:r,nat:r,kind:"morte"});
@@ -930,15 +947,16 @@ function renderPlayer(){
   if(c.rd)chips.push(`<span class="chip">Colete RD ${c.rd}</span>`);
   if(c.medo)chips.push(`<span class="chip w">Medo ${c.medo}: ${MEDO[c.medo].split(" — ")[0]}</span>`);
   if(c.infec)chips.push(`<span class="chip g">Infecção ${c.infec}: ${INFEC[c.infec].split(" — ")[0]}</span>`);
+  if(c.san!=null){const f=sanFaixa(c);chips.push(`<span class="chip" style="border-color:#8a6cff;color:#cbbcff">Sanidade ${c.san}/${c.sanMax}${f[1]!=="Lúcido"?` · ${f[1]}`:""}</span>`)}
   if(c.feridas)chips.push(`<span class="chip r">${c.feridas} ferimento${c.feridas>1?"s":""} grave${c.feridas>1?"s":""}</span>`);
   if(st!=="ok")chips.push(`<span class="chip r">${statusLabel(st)[0]}</span>`);
   const ped=PUB.pedido&&pedidoForMe()?PUB.pedido:null;
   let pedHTML="";
   if(ped&&st==="ok"){
     const done=answeredPedido();
-    const lbl=ped.attr==="livre"?"":`Teste de ${ANAME[ped.attr]}`;
+    const lbl=ped.attr==="livre"?"":ped.attr==="san"?"Sanidade inicial":`Teste de ${ANAME[ped.attr]}`;
     pedHTML=`<div class="pedido" style="--c:${p.cor}"><div class="t">O mestre pediu</div><div class="q">${esc(lbl)}${ped.dif!=null?` · DIF ${ped.dif}`:""}</div>${ped.texto?`<div class="small" style="margin:-6px 0 10px">${esc(ped.texto)}</div>`:""}
-      ${ped.attr!=="livre"?`<button class="big" data-act="pedRoll" ${done?"disabled":""}>${done?"Você já rolou ✓":`Rolar ${ANAME[ped.attr]}`}<small>D20 ${attrMod(c,ped.attr)>=0?"+":"−"} ${Math.abs(attrMod(c,ped.attr))}${nextSpec?" +2 esp.":""}${nextBonus?` ${nextBonus>0?"+":""}${nextBonus} bônus`:""}</small></button>`:""}</div>`;
+      ${ped.attr==="san"?`<button class="big" data-act="sanRoll" ${done||c.san!=null?"disabled":""}>${done||c.san!=null?"Você já rolou ✓":"Rolar Sanidade"}<small>D100 · o resultado é a sua Sanidade</small></button>`:ped.attr!=="livre"?`<button class="big" data-act="pedRoll" ${done?"disabled":""}>${done?"Você já rolou ✓":`Rolar ${ANAME[ped.attr]}`}<small>D20 ${attrMod(c,ped.attr)>=0?"+":"−"} ${Math.abs(attrMod(c,ped.attr))}${nextSpec?" +2 esp.":""}${nextBonus?` ${nextBonus>0?"+":""}${nextBonus} bônus`:""}</small></button>`:""}</div>`;
   }
   let dying="";
   if(st==="down")dying=`<div class="pedido" style="--c:#e0a030;border-color:#e0a030"><div class="t" style="color:#e0a030">Você está morrendo</div><div class="q">Falhas: ${c.falhas}/3</div><button class="big" style="background:#e0a030" data-act="deathRoll">Rolar teste de morte<small>D20 · 10+ resiste · natural 20 volta com 1 PV</small></button></div>`;
@@ -951,11 +969,12 @@ function renderPlayer(){
   const wHTML=ws.length?ws.map((w,i)=>{const k=w.ranged?"prec":"forca",m=attrMod(c,k)-pen.atk;const no=w.usesAmmo&&c.mun<=0;
     return`<div class="weap"><div class="wn">${esc(w.name)}<small>${w.ranged?"à distância · Precisão":"corpo a corpo · Força"}${w.usesAmmo?` · ${c.mun} ${esc(c.munNome||"munição")}`:""}</small></div>
       <button class="b pri" data-act="atk" data-w="${i}" ${no||st!=="ok"?"disabled":""}>${no?"Sem munição":`Atacar D20${m>=0?"+":""}${m}`}</button><button class="b" data-act="dmg" data-w="${i}" ${st!=="ok"?"disabled":""}>Dano ${w.n}D${w.f}${w.b?(w.b>0?"+":"")+w.b:""}</button></div>`}).join(""):`<div class="small">Nenhuma arma com dano anotado no equipamento.</div>`;
-  const penTxt=[];if(pen.all)penTxt.push(`−${pen.all} em todos os testes`);if(pen.fis)penTxt.push(`−${pen.fis} em Força/Agilidade/Precisão`);if(pen.atk)penTxt.push("−1 em ataques");
+  const penTxt=[];if(pen.all)penTxt.push(`−${pen.all} em todos os testes`);if(sanPen(c))penTxt.push(`−${sanPen(c)} em Vontade e Intelecto (Sanidade)`);if(pen.fis)penTxt.push(`−${pen.fis} em Força/Agilidade/Precisão`);if(pen.atk)penTxt.push("−1 em ataques");
   return`<div class="wrap-narrow stack" style="--c:${p.cor}">
     <div class="card"><div class="ptop"><img src="${IMG[p.id]}" alt=""><div class="info"><h2>${p.nome}</h2><div class="role">${p.papel}</div>
       <div class="hpline"><b>${c.hp}</b><span class="small">/ ${c.hpMax} PV</span></div><div class="hpbar"><i style="width:${pct}%"></i></div><div class="chips">${chips.join("")}</div></div></div></div>
     ${pedHTML}${dying}
+    ${c.san!=null&&sanFaixa(c)[1]!=="Lúcido"?`<div class="warnbox" style="border-color:#8a6cff;color:#d8ceff"><b>Sanidade ${c.san} · ${sanFaixa(c)[1]}:</b> ${sanFaixa(c)[2]}</div>`:""}
     ${iniPlayerHTML(c,st)}
     ${res}
     <div class="card"><h3>Testes</h3>
@@ -989,8 +1008,8 @@ let pd={attr:"agil",dif:11,alvos:"todos",show:false,texto:""};
 function respHTML(){
   const p=PUB.pedido;if(!p)return`<div class="small">Nenhum pedido ativo.</div>`;
   const alvos=p.alvos==="todos"?PCS.map(x=>x.id):p.alvos;const rs=allRolls();const dif=PRIV.difs[p.id]??p.dif;
-  return`<div class="small" style="margin-bottom:6px">Pedido ativo: <b style="color:#fff">${p.attr==="livre"?esc(p.texto||"rolagem livre"):"Teste de "+ANAME[p.attr]}</b>${dif!=null?` · DIF ${dif}${p.dif==null?" (oculta)":""}`:""}</div>`+
-    alvos.map(id=>{const r=rs.find(x=>x.pedido===p.id&&x.pc===id);const oc=r?outcome(r.total,dif,r.nat):null;
+  return`<div class="small" style="margin-bottom:6px">Pedido ativo: <b style="color:#fff">${p.attr==="livre"?esc(p.texto||"rolagem livre"):p.attr==="san"?"Sanidade inicial (D100)":"Teste de "+ANAME[p.attr]}</b>${dif!=null?` · DIF ${dif}${p.dif==null?" (oculta)":""}`:""}</div>`+
+    alvos.map(id=>{const r=rs.find(x=>x.pedido===p.id&&x.pc===id);const oc=r&&p.attr!=="san"?outcome(r.total,dif,r.nat):null;
       return`<div class="r"><span style="color:${PCMAP[id].cor}">${PCMAP[id].nome}</span><span>${r?`<b style="font-family:Bebas Neue;font-size:20px">${r.total}</b> ${oc?`<span class="oc ${oc[1]}" style="font-size:12px;font-weight:700">${oc[0]}</span>`:""}`:`<span class="small">aguardando…</span>`}</span></div>`}).join("");
 }
 function renderOnline(){const el=$("#party");if(el&&role==="mestre"&&unlocked&&PRIV.tab==="mesa"&&!editing())el.innerHTML=partyHTML()}
@@ -998,7 +1017,7 @@ function partyHTML(){
   const on=onlinePcs();
   return PCS.map(p=>{const c=PUB.pcs[p.id],st=pcState(c);
     return`<div class="pm" style="--c:${p.cor}"><img src="${IMG[p.id]}" alt=""><div><div class="n"><i class="${on.has(p.id)?"on":""}" title="${on.has(p.id)?"conectado":"offline"}"></i>${p.nome} <span class="status ${statusLabel(st)[1]}" style="margin:0;padding:1px 7px;font-size:10px">${statusLabel(st)[0]}</span></div>
-      <div class="s"><span class="hpv">${c.hp}</span>/${c.hpMax} PV · Def ${10+Number(c.agil)}${c.medo?` · Medo ${c.medo}`:""}${c.infec?` · Inf ${c.infec}`:""}${c.feridas?` · Fer ${c.feridas}`:""}${c.munNome?` · ${c.mun} ${esc(c.munNome.split(" ")[0])}`:""}</div></div>
+      <div class="s"><span class="hpv">${c.hp}</span>/${c.hpMax} PV · Def ${10+Number(c.agil)}${c.medo?` · Medo ${c.medo}`:""}${c.san!=null?` · San ${c.san}`:""}${c.infec?` · Inf ${c.infec}`:""}${c.feridas?` · Fer ${c.feridas}`:""}${c.munNome?` · ${c.mun} ${esc(c.munNome.split(" ")[0])}`:""}</div></div>
       <div class="ctl"><button class="b dmg" data-act="hp" data-id="${p.id}" data-v="-5">−5</button><button class="b dmg" data-act="hp" data-id="${p.id}" data-v="-1">−1</button><button class="b heal" data-act="hp" data-id="${p.id}" data-v="1">+1</button></div></div>`}).join("");
 }
 function renderMesa(){
@@ -1015,7 +1034,8 @@ function renderMesa(){
       <div class="row"><label>Aviso</label><input type="text" id="pdTxt" value="${esc(pd.texto)}" placeholder="opcional — ex.: o chão range sob vocês" style="flex:1;padding:6px 8px"></div>
       <div class="btnrow" style="margin-top:12px"><button class="b pri" data-act="pdSend">Enviar pedido</button>${PUB.pedido?`<button class="b" data-act="pdCancel">Encerrar pedido</button>`:""}</div>
       <div class="row" style="border-top:1px solid var(--line);padding-top:10px"><label>Medo</label><button class="b" data-act="fear" data-v="11">Assustador · DIF 11</button><button class="b" data-act="fear" data-v="14">Horror cósmico · 14</button><button class="b" data-act="fear" data-v="17">Impossível · 17</button></div>
-      <div class="small" style="margin-top:4px">Pede Vontade para quem está marcado em “Quem”. Quem falhar ganha Medo sozinho.</div>
+      <div class="row"><label>Sanidade</label><button class="b" data-act="sanPedido">Pedir Sanidade inicial (D100)</button><span class="small">só para quem ainda não rolou</span></div>
+      <div class="small" style="margin-top:4px">Pede Vontade para quem está marcado em “Quem”. Quem falhar ganha Medo sozinho. Em Horror cósmico (14) e Impossível (17), quem já tem Sanidade também perde: 1 se passar, 1D6/1D10 se falhar.</div>
       <div class="resp" id="respBox">${respHTML()}</div>
     </div>
     <div class="card"><h3>Rolagens</h3><div class="feed" data-feed="60" style="max-height:560px">${feedHTML(60)}</div></div>
@@ -1039,7 +1059,7 @@ function renderMesa(){
 function pips(n,max,act,id,color){let h=`<span class="pips" style="--pc:${color||"var(--c)"}">`;for(let i=1;i<=max;i++)h+=`<button class="pip ${i<=n?"on":""}" data-act="${act}" data-id="${id}" data-v="${i}"></button>`;return h+`<button class="clr" data-act="${act}" data-id="${id}" data-v="0">zerar</button></span>`}
 function renderPC(p){
   const c=PUB.pcs[p.id],cv=PRIV.pcs[p.id],st=pcState(c),[lab,cls]=statusLabel(st),pen=penalties(c),pct=clamp(c.hp/c.hpMax*100,0,100);
-  const penTxt=[];if(pen.all)penTxt.push(`−${pen.all} em todos os testes`);if(pen.fis)penTxt.push(`−${pen.fis} em Força/Agilidade/Precisão`);if(pen.atk)penTxt.push(`−1 em ataques`);
+  const penTxt=[];if(pen.all)penTxt.push(`−${pen.all} em todos os testes`);if(sanPen(c))penTxt.push(`−${sanPen(c)} em Vontade e Intelecto (Sanidade)`);if(pen.fis)penTxt.push(`−${pen.fis} em Força/Agilidade/Precisão`);if(pen.atk)penTxt.push(`−1 em ataques`);
   const attrs=ATTRS.map(([k,n])=>`<div class="attr"><div class="n">${n}</div><input type="number" min="0" max="8" data-num="${k}" data-id="${p.id}" value="${c[k]}"></div>`).join("");
   const dying=c.hp<=0&&st!=="dead"?`<div class="dying"><b>${c.estavel?"Estável":"Morrendo"}</b> — ${c.estavel?"acorda com 1 PV após 1 hora de descanso.":"o jogador rola o teste de morte na tela dele; as falhas são marcadas aqui automaticamente. Dano recebido = 1 falha; crítico = morte."}
     <div class="btnrow" style="margin-top:8px"><span class="small">Falhas</span>${pips(c.falhas,3,"falhas",p.id,"#d64541")}<button class="b ${c.estavel?"":"pri"}" data-act="estavel" data-id="${p.id}">${c.estavel?"Desmarcar estável":"Marcar estável"}</button></div></div>`:"";
@@ -1062,6 +1082,7 @@ function renderPC(p){
       <div class="card track"><div class="lbl"><span>Medo</span><span>${c.medo}/4</span></div>${pips(c.medo,4,"medo",p.id)}<div class="eff">${MEDO[c.medo]}</div></div>
       <div class="card track"><div class="lbl"><span>Infecção</span><span>${c.infec}/5</span></div>${pips(c.infec,5,"infec",p.id,"#8db33a")}<div class="eff">${INFEC[c.infec]}</div></div>
       <div class="card track"><div class="lbl"><span>Ferimentos graves</span><span>${c.feridas}/3</span></div>${pips(c.feridas,3,"feridas",p.id,"#d64541")}<div class="eff">${FERIDA[c.feridas]}</div></div></div>
+    ${sanCardHTML(c,p.id)}
     <div class="card"><h3>Atributos</h3><div class="attrs">${attrs}</div>
       <div class="derived"><div>Defesa<b>${10+Number(c.agil)}</b></div><div>Iniciativa <input type="number" min="-5" max="12" data-num="ini" data-id="${p.id}" value="${c.ini}" style="width:46px;font-family:Bebas Neue;font-size:20px"></div><div>Corpo a corpo<b>D20+${c.forca}</b></div><div>Distância<b>D20+${c.prec}</b></div></div>
       ${penTxt.length?`<div class="pen">Penalidades ativas: ${penTxt.join(" · ")} — aplicadas automaticamente nas rolagens do jogador.</div>`:""}</div>
@@ -1094,7 +1115,7 @@ function renderNPCs(){
 }
 const RULES=`<div class="rules">
 <div class="toc">
-<a href="#r-teste">Testes</a><a href="#r-rodada">Rodada e iniciativa</a><a href="#r-ataque">Ataque e Defesa</a><a href="#r-reacoes">Esquiva e proteção</a><a href="#r-dano">Dano e morte</a><a href="#r-cura">Cura</a><a href="#r-municao">Munição e Ruído</a><a href="#r-infec">Infecção</a><a href="#r-medo">Medo</a><a href="#r-inimigos">Inimigos</a><a href="#r-evo">Evolução</a><a href="#r-mestre">Mestre</a>
+<a href="#r-teste">Testes</a><a href="#r-rodada">Rodada e iniciativa</a><a href="#r-ataque">Ataque e Defesa</a><a href="#r-reacoes">Esquiva e proteção</a><a href="#r-dano">Dano e morte</a><a href="#r-cura">Cura</a><a href="#r-municao">Munição e Ruído</a><a href="#r-infec">Infecção</a><a href="#r-medo">Medo</a><a href="#r-sanidade">Sanidade</a><a href="#r-inimigos">Inimigos</a><a href="#r-evo">Evolução</a><a href="#r-mestre">Mestre</a>
 </div>
 
 <section id="r-teste">
@@ -1235,6 +1256,21 @@ const RULES=`<div class="rules">
 <p><b>Recuperação:</b> −1 por uma cena de apoio interpretada (uma conversa com o grupo, um momento de calma). Zera com uma noite segura. O jogador nunca perde o controle do personagem: ele escolhe como o medo aparece.</p>
 </section>
 
+<section id="r-sanidade">
+<h2>9b. Sanidade <span class="new">NOVO</span></h2>
+<p>No <b>primeiro contato com o horror cósmico</b> o mestre pede a Sanidade inicial: cada jogador rola <b>1D100</b> e o resultado é a Sanidade do personagem. Ela só desce; é o desgaste da mente, enquanto o Medo é o susto do momento.</p>
+<p><b>Perda:</b> em testes de Medo de horror cósmico (DIF 14) perde 1 se passar e <b>1D6</b> se falhar; no impossível (DIF 17), 1 ou <b>1D10</b>. Falha crítica perde o máximo; natural 20 não perde nada. O mestre também pode tirar Sanidade por cenas marcantes.</p>
+<table><thead><tr><th>Sanidade</th><th>Estado</th><th>Efeito</th></tr></thead><tbody>
+<tr><td>50+</td><td>Lúcido</td><td>Sem efeito</td></tr>
+<tr><td>30–49</td><td>Inquieto</td><td>Pesadelos; uma noite segura deixa o Medo em 1 em vez de zerar</td></tr>
+<tr><td>15–29</td><td>Perturbado</td><td>−1 em Vontade e Intelecto; o mestre pode mostrar visões só para você</td></tr>
+<tr><td>5–14</td><td>Fragmentado</td><td>−2 em Vontade e Intelecto; falhar num teste de Medo dá +1 Medo extra</td></tr>
+<tr><td>1–4</td><td>À beira</td><td>−3 em Vontade e Intelecto; ganhe um Trauma permanente; o Sinal fala com você</td></tr>
+<tr><td>0</td><td>Perdido</td><td>A mente se entrega: o personagem passa para o mestre até ser resgatado</td></tr>
+</tbody></table>
+<p>As penalidades já entram sozinhas nas rolagens. Sanidade não volta com descanso: só por eventos raros da história.</p>
+</section>
+
 <section id="r-inimigos">
 <h2>10. Inimigos <span class="new">FECHADO</span></h2>
 <div class="tablewrap"><table><thead><tr><th>Inimigo</th><th>Ataque</th><th>Defesa</th><th>PV</th><th>Dano</th><th>Traço</th></tr></thead><tbody>
@@ -1368,6 +1404,7 @@ document.addEventListener("click",e=>{
     /* player */
     case"test":rollTest(t.dataset.attr);window.scrollTo({top:0,behavior:"smooth"});return;
     case"pedRoll":rollTest(PUB.pedido.attr);return;
+    case"sanRoll":if(PUB.pcs[myPc].san==null&&!answeredPedido())rollSan();return;
     case"deathRoll":rollDeath();renderView();return;
     case"infRoll":rollInfec();renderView();return;
     case"spec":nextSpec=!nextSpec;renderView();return;
@@ -1387,6 +1424,7 @@ document.addEventListener("click",e=>{
     case"sup":{const k=t.dataset.k;PUB.sup[k]=Math.max(0,(PUB.sup[k]||0)+v);savePub();renderView();return}
     case"rest":rest(t.dataset.k);renderAll();return;
     case"fear":sendFear(v);renderView();return;
+    case"sanPedido":sendSanPedido();renderView();return;
     case"eatkT":{const i=t.dataset.i,sel=document.querySelector(`[data-ealvo="${i}"]`);if(!sel)return;PRIV.lastAlvo=sel.value;enemyAttack(Number(i),sel.value);renderAll();return}
     case"ruido":PUB.ruido=v;if(v===3)toast("Ruído 3: infectados se aproximam (1D4 comuns).");if(v===5)toast("Ruído 5: HORDA.");savePub();renderMeta();return;
     case"pdSend":{const dif=$("#pdDif").value===""?null:Number($("#pdDif").value);const show=$("#pdShow").checked;const txt=$("#pdTxt").value.trim();
@@ -1408,6 +1446,7 @@ document.addEventListener("click",e=>{
       if(c.hp<=0){c.falhas=clamp(c.falhas+1,0,3);toast("Dano em incapacitado: +1 falha")}
       else{const dd=Math.max(1,n-Number(c.rd||0));setHp(c,c.hp-dd);if(dd>=10&&c.feridas<3){c.feridas++;toast("10+ de dano num golpe: Ferimento Grave")}else if(c.rd)toast(`Colete absorveu ${n-dd}`)}break}
     case"cura":{const n=Number($("#amt-"+id).value)||0;if(!n)return;setHp(c,c.hp+n);break}
+    case"sanLoss":{if(c.san==null)return;const s=t.dataset.v;const n=s[0]==="d"?d(Number(s.slice(1))):Number(s);if(n<0){c.san=Math.min(Number(c.sanMax)||100,Number(c.san)-n)}else perderSan(id,n,s[0]==="d"?`rolou 1D${s.slice(1)}`:"");if(s[0]==="d")toast(`${PCMAP[id].nome}: −${n} de Sanidade (1D${s.slice(1)})`);break}
     case"medo":c.medo=v;if(v===4)toast("Ruptura: anote um Trauma; o Medo volta a 2.");break;
     case"infec":c.infec=v;break;
     case"feridas":c.feridas=v;break;
@@ -1570,6 +1609,20 @@ function enemyAttack(i,pcId){
   emitRoll(roll);toast(msg);if(r===20)diary(msg,"critico");savePub();savePriv();
 }
 
+/* ---------- sanity (D100) ---------- */
+function perderSan(pc,loss,motivo){const c=PUB.pcs[pc];if(!c||c.san==null)return;const antes=sanFaixa(c);c.san=Math.max(0,Number(c.san)-loss);const dep=sanFaixa(c);
+  diary(`${PCMAP[pc].nome} perdeu ${loss} de Sanidade${motivo?` — ${motivo}`:""} (agora ${c.san})`,"medo");
+  if(antes&&dep&&antes[1]!==dep[1]){toast(`${PCMAP[pc].nome}: Sanidade ${dep[1]}`);diary(`${PCMAP[pc].nome} ficou ${dep[1]}: ${dep[2]}`,"medo")}}
+function sendSanPedido(){const pid="p"+Date.now().toString(36);PUB.pedido={id:pid,attr:"san",alvos:pd.alvos,dif:null,texto:"Primeiro contato com o horror. Role sua Sanidade inicial.",at:Date.now()};savePub();toast("Pedido de Sanidade enviado.");diary("Sanidade inicial pedida (D100)","medo")}
+function sanCardHTML(c,id){const f=sanFaixa(c);
+  if(c.san==null)return`<div class="card track"><div class="lbl"><span>Sanidade</span><span>—</span></div><div class="eff">Ainda não rolada. Use “Pedir Sanidade inicial (D100)” na Mesa no primeiro contato com o horror cósmico.</div>
+    <div class="btnrow" style="margin-top:6px"><span class="small">ou defina à mão:</span><input type="number" min="0" max="100" data-num="san" data-id="${id}" placeholder="0" style="width:60px"><input type="number" min="1" max="100" data-num="sanMax" data-id="${id}" placeholder="inicial" style="width:70px"></div></div>`;
+  const pct=clamp(Number(c.san)/Math.max(1,Number(c.sanMax)||100)*100,0,100);
+  return`<div class="card track"><div class="lbl"><span>Sanidade</span><span>${c.san}/${c.sanMax}</span></div><div class="hpbar" style="margin:6px 0"><i style="width:${pct}%;background:#8a6cff"></i></div>
+    <div class="eff"><b>${f[1]}</b>: ${f[2]}</div>
+    <div class="btnrow" style="margin-top:6px"><button class="b dmg" data-act="sanLoss" data-id="${id}" data-v="1">−1</button><button class="b dmg" data-act="sanLoss" data-id="${id}" data-v="d4">−1D4</button><button class="b dmg" data-act="sanLoss" data-id="${id}" data-v="d6">−1D6</button><button class="b dmg" data-act="sanLoss" data-id="${id}" data-v="d10">−1D10</button><button class="b heal" data-act="sanLoss" data-id="${id}" data-v="-1">+1</button>
+      <span class="small">valor</span><input type="number" min="0" max="100" data-num="san" data-id="${id}" value="${c.san}" style="width:54px"></div></div>`}
+
 /* ---------- QoL: fear test ---------- */
 function sendFear(dif){
   const pid="p"+Date.now().toString(36);
@@ -1579,8 +1632,11 @@ function sendFear(dif){
 function fearEffect(r){
   if(!r.pedido||!PRIV.medoP||PRIV.medoP[r.pedido]==null||!PUB.pcs[r.pc])return false;
   const dif=PRIV.medoP[r.pedido],c=PUB.pcs[r.pc],n=PCMAP[r.pc].nome;
-  if(r.nat===20||(r.nat!==1&&r.total>=dif))return true;
-  const add=r.nat===1?2:1;c.medo=clamp(c.medo+add,0,4);
+  const ok=r.nat===20||(r.nat!==1&&r.total>=dif);
+  if(dif>=14&&c.san!=null&&Number(c.san)>0){const f=dif>=17?10:6;const loss=r.nat===20?0:ok?1:r.nat===1?f:d(f);
+    if(loss){perderSan(r.pc,loss,`${ok?"resistiu ao":"falhou no"} horror (DIF ${dif})`)}}
+  if(ok)return true;
+  const add=(r.nat===1?2:1)+(c.san!=null&&Number(c.san)<15&&Number(c.san)>=5?1:0);c.medo=clamp(c.medo+add,0,4);
   diary(`${n} falhou no teste de Medo: +${add} (Medo ${c.medo})${c.medo>=4?" — RUPTURA":""}`,"medo");if(c.medo>=4)toast(`${n} chegou à Ruptura!`);return true;
 }
 
@@ -2067,6 +2123,7 @@ function selPanelHTML(){
    <div class="btnrow" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><span class="small">Adicionar</span>
      <select id="mapNpc"><option value="">NPC…</option>${(PRIV.npcs||[]).map(n=>`<option value="${n.id}">${esc(n.nome)}</option>`).join("")}</select><button class="b" data-act="mapAddNpc">+ NPC</button>
      <button class="b" data-act="mapAddEnemies">+ Inimigos em cena (${(PRIV.enemies||[]).filter(e=>e.hp>0).length})</button>
+     <button class="b ${PUB.livreMov===false?"":"on"}" data-act="mapLivre" title="os jogadores arrastam a própria ficha dentro da cena em que estão">Jogadores movem a própria ficha: ${PUB.livreMov===false?"não":"sim"}</button>
      <button class="b ${mapMode==="mark"?"on":""}" data-act="mapMarkMode">${mapMode==="mark"?"Clique no mapa…":"+ Marcador"}</button></div>
    <div class="small" style="margin-top:6px">Fichas e marcadores com contorno tracejado estão ocultos para os jogadores. Zoom: role o mouse sobre o mapa; para arrastar a vista, segure o botão direito (ou Alt + arrastar).</div></div>`;
 }
@@ -2084,6 +2141,7 @@ function renderMapPlayer(){
   const id=currentScene(),S=SCMAP[id];const mine=myScene();
   return`<div class="stack" style="max-width:1100px;margin:0 auto">${sceneNav(false)}
     <div class="small">Você está em: <b style="color:#fff">${SCMAP[mine]?(SCMAP[mine].grupo==="Hospital"?"Hospital São Vicente · ":"")+SCMAP[mine].nome:"—"}</b>${id!==mine?` · vendo ${S.nome} <button class="b" data-act="mapScene" data-s="${mine}" style="padding:2px 8px;margin-left:6px">Voltar para onde estou</button>`:""}</div>
+    ${PUB.livreMov!==false&&id===mine?`<div class="small">Arraste a sua ficha para andar por aqui. Para trocar de lugar, fale com o mestre.</div>`:""}
     ${mapCanvasHTML(false)}<div id="mkpanel">${markPanelHTML(false)}</div></div>`;
 }
 function refreshMap(){if(mapDrag)return;const w=$("#mapwrap");if(!w)return;
@@ -2115,7 +2173,10 @@ document.addEventListener("pointerdown",e=>{
   const wrap=e.target.closest("#mapwrap");if(!wrap)return;
   const master=role==="mestre"&&unlocked;
   const tk=e.target.closest("[data-tk]"),mk=e.target.closest("[data-mk]");
-  if(!master){if(mk){mapOpenMark=mk.dataset.mk;$("#mkpanel").innerHTML=markPanelHTML(false)}return}
+  if(!master){if(mk){mapOpenMark=mk.dataset.mk;$("#mkpanel").innerHTML=markPanelHTML(false);return}
+    if(tk&&tk.dataset.tk==="pc_"+myPc&&PUB.livreMov!==false&&!LOCAL()){const v=(PUB.mapa.tokens||{})[tk.dataset.tk];if(!v||v.s!==currentScene())return;
+      e.preventDefault();const [x,y]=mapXY(e);mapDrag={type:"self",k:tk.dataset.tk,x0:x,y0:y,start:{[tk.dataset.tk]:[v.x,v.y]},moved:false};wrap.setPointerCapture(e.pointerId)}
+    return}
   e.preventDefault();const [x,y]=mapXY(e);const M=mapState();
   if(mapMode==="mark"){const k="m"+Date.now().toString(36);M.marks[k]={s:currentScene(),x,y,tipo:"evento",nome:"Novo marcador",desc:"",nota:"",vis:false};mapMode=null;mapOpenMark=k;savePriv();refreshMap();return}
   if(tk){const k=tk.dataset.tk;if(e.shiftKey||e.ctrlKey||e.metaKey){mapSel.has(k)?mapSel.delete(k):mapSel.add(k)}else if(!mapSel.has(k)){mapSel=new Set([k])}
@@ -2127,12 +2188,14 @@ document.addEventListener("pointerdown",e=>{
 document.addEventListener("pointermove",e=>{
   if(!mapDrag||!$("#mapwrap"))return;const [x,y]=mapXY(e);const dx=x-mapDrag.x0,dy=y-mapDrag.y0;
   if(Math.abs(dx)+Math.abs(dy)>.004)mapDrag.moved=true;
-  if(mapDrag.type==="tok"){Object.entries(mapDrag.start).forEach(([k,[sx,sy]])=>{const el=document.querySelector(`[data-tk="${k}"]`);if(el){el.style.left=clamp(sx+dx,0,1)*100+"%";el.style.top=clamp(sy+dy,0,1)*100+"%"}})}
+  if(mapDrag.type==="tok"||mapDrag.type==="self"){Object.entries(mapDrag.start).forEach(([k,[sx,sy]])=>{const el=document.querySelector(`[data-tk="${k}"]`);if(el){el.style.left=clamp(sx+dx,0,1)*100+"%";el.style.top=clamp(sy+dy,0,1)*100+"%"}})}
   else if(mapDrag.type==="mk"){const el=document.querySelector(`[data-mk="${mapDrag.k}"]`);if(el){el.style.left=clamp(mapDrag.start[0]+dx,0,1)*100+"%";el.style.top=clamp(mapDrag.start[1]+dy,0,1)*100+"%"}}
   else{const L=$("#lasso");L.classList.remove("hidden");L.style.left=Math.min(x,mapDrag.x0)*100+"%";L.style.top=Math.min(y,mapDrag.y0)*100+"%";L.style.width=Math.abs(dx)*100+"%";L.style.height=Math.abs(dy)*100+"%"}
 });
 document.addEventListener("pointerup",e=>{
-  if(!mapDrag)return;const D=mapDrag;mapDrag=null;if(!$("#mapwrap"))return;const [x,y]=mapXY(e);const dx=x-D.x0,dy=y-D.y0;const M=mapState();
+  if(!mapDrag)return;const D=mapDrag;mapDrag=null;if(!$("#mapwrap"))return;const [x,y]=mapXY(e);const dx=x-D.x0,dy=y-D.y0;
+  if(D.type==="self"){if(D.moved){const v=PUB.mapa.tokens[D.k];const [sx,sy]=D.start[D.k];v.x=clamp(sx+dx,0,1);v.y=clamp(sy+dy,0,1);sendMyMove(v.s,v.x,v.y)}refreshMap();return}
+  const M=mapState();
   if(D.type==="tok"){if(D.moved){Object.entries(D.start).forEach(([k,[sx,sy]])=>{M.tokens[k].x=clamp(sx+dx,0,1);M.tokens[k].y=clamp(sy+dy,0,1)});UNDO.push(D.before);if(UNDO.length>30)UNDO.shift();syncMapPub();savePub();savePriv();renderMeta()}refreshMap();return}
   if(D.type==="mk"){if(D.moved){M.marks[D.k].x=clamp(D.start[0]+dx,0,1);M.marks[D.k].y=clamp(D.start[1]+dy,0,1);syncMapPub();savePub();savePriv()}else{mapOpenMark=D.k}refreshMap();return}
   if(!D.moved){if(!D.add)mapSel.clear();refreshMap();return}
@@ -2162,6 +2225,7 @@ function mapAction(a,t){
     case"mapAddNpc":{const id=$("#mapNpc").value;if(!id){toast("Escolha um NPC.");return true}const S=SCMAP[currentScene()];const k="npc_"+id+"_"+Date.now().toString(36);M.tokens[k]={s:S.id,x:S.spawn[0]+.05,y:S.spawn[1],t:"npc",ref:id,vis:false,fx:id==="semrosto"?"semrosto":id==="eco"?"falha":null,som:id==="eco"?"sussurros":null};mapSel=new Set([k]);done();toast("NPC colocado oculto. Mostre quando aparecer.");return true}
     case"mapAddEnemies":{const S=SCMAP[currentScene()];const es=(PRIV.enemies||[]).filter(e=>e.hp>0&&!Object.values(M.tokens).some(v=>v.t==="en"&&v.nome===e.nome));if(!es.length){toast("Nenhum inimigo novo em cena. Adicione em NPCs & Combate.");return true}
       es.forEach((en,i)=>{M.tokens["en_"+Date.now().toString(36)+i]={s:S.id,x:clamp(S.spawn[0]+.12+(i%4)*.03,0,1),y:clamp(S.spawn[1]-.1+Math.floor(i/4)*.05,0,1),t:"en",nome:en.nome,vis:false}});done();toast("Inimigos colocados ocultos.");return true}
+    case"mapLivre":PUB.livreMov=PUB.livreMov===false?true:false;savePub();refreshMapView();toast(PUB.livreMov?"Jogadores podem mover a própria ficha.":"Só você move as fichas agora.");return true;
     case"mapMarkMode":mapMode=mapMode==="mark"?null:"mark";refreshMapView();return true;
     case"mkToggle":{const k=t.dataset.k;M.marks[k].vis=!M.marks[k].vis;if(M.marks[k].vis)diary(`Revelado no mapa: ${M.marks[k].nome}`,"pista");done();return true}
     case"mkDel":{if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="Confirmar?";setTimeout(()=>{t.dataset.arm="";t.textContent="Apagar marcador"},2500);return true}delete M.marks[mapOpenMark];mapOpenMark=null;done();return true}
