@@ -1666,7 +1666,8 @@ function renderPistasMaster(){
     <div class="fld" style="margin-top:0"><label>Título</label><input type="text" id="pnT" placeholder="Fotografia antiga" style="width:100%;padding:7px 9px"></div>
     <div class="fld"><label>Texto (opcional)</label><textarea id="pnX" rows="4" placeholder="No verso, escrito à mão: 017 — 03:17"></textarea></div>
     <div class="fld"><label>Imagem (opcional)</label><input type="file" id="pnI" accept="image/*"><img id="pnPrev" class="hidden" style="max-width:220px;margin-top:8px;border-radius:8px;border:1px solid var(--line)"></div>
-    <div class="btnrow" style="margin-top:12px"><button class="b pri" data-act="pistaSave">Salvar como rascunho</button><span class="small">Os jogadores só veem depois que você revelar.</span></div></div>
+    <div class="btnrow" style="margin-top:12px"><button class="b pri" data-act="pistaSave">Salvar como rascunho</button><span class="small">Os jogadores só veem depois que você revelar.</span></div>
+    <div class="btnrow" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><label class="b upl">Importar pacote de pistas (.json)<input type="file" accept=".json,application/json" data-pistaimp hidden></label><span class="small">entram todas como rascunho, ocultas dos jogadores</span></div></div>
     ${ms.length?ms.map(x=>pistaCard(x,true)).join(""):`<div class="card small">Nenhuma pista criada ainda.</div>`}</div>`;
 }
 function renderPistasPlayer(){const ps=pistaList(PISTAS,true);return`<div class="wrap-narrow stack">${ps.length?ps.map(x=>pistaCard(x,false)).join(""):`<div class="card small">Nenhuma pista ainda. Quando o mestre revelar documentos, fotos ou registros, eles aparecem aqui.</div>`}</div>`}
@@ -1674,6 +1675,11 @@ function compressImage(file){return new Promise((res,rej)=>{const fr=new FileRea
   const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);res(cv.toDataURL("image/jpeg",.78))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
 let pendingImg=null;
 document.addEventListener("change",async e=>{if(e.target.id!=="pnI"||!e.target.files[0])return;try{pendingImg=await compressImage(e.target.files[0]);const pv=$("#pnPrev");pv.src=pendingImg;pv.classList.remove("hidden")}catch(err){toast("Não consegui ler essa imagem.")}});
+async function importPistas(file){if(!file)return;let j;try{j=JSON.parse(await file.text())}catch(e){toast("Arquivo inválido.");return}
+  const L=Array.isArray(j)?j:(j&&j.pistas)||[];if(!L.length){toast("Nenhuma pista no arquivo.");return}let n=0;
+  for(const x of L){if(!x||!x.titulo)continue;const k="pi"+Date.now().toString(36)+(n++);await pistaWrite("mestre/pistas/"+k,clean({titulo:String(x.titulo).slice(0,120),texto:String(x.texto||"").slice(0,2000),img:typeof x.img==="string"&&x.img.startsWith("data:image/")?x.img:null,at:Date.now()+n}))}
+  toast(`${n} pista${n>1?"s importadas":" importada"} como rascunho.`);if(!LOCAL())setTimeout(renderView,400)}
+document.addEventListener("change",e=>{const t=e.target;if(!t.hasAttribute||!t.hasAttribute("data-pistaimp")||!(role==="mestre"&&unlocked))return;importPistas(t.files[0]);t.value=""});
 async function pistaWrite(path,val){
   if(LOCAL()){const key=path.startsWith("publico")?"us-pistas":"us-mpistas";const k=path.split("/").pop();const m=ls(key)||{};if(val===null)delete m[k];else m[k]=val;ls(key,m);
     if(key==="us-pistas")onPistas(m);else{MPISTAS=m;rerender()}return}
