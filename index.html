@@ -598,7 +598,9 @@ function weapons(c){
 }
 
 /* ---------- persistence (Firebase) ---------- */
-let fb=null, fdb=null, fauth=null, ONLINE={};
+let fb=null, fdb=null, fauth=null, ONLINE={}, SKEW=0;
+/* clock corrected by the Firebase server, so devices with a wrong clock still agree on "now" */
+function now(){return Date.now()+SKEW}
 const CONFIG_OK=()=>FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey&&!/COLE_AQUI/.test(FIREBASE_CONFIG.apiKey);
 function saveLocal(){ls("us-mesa-pub",PUB);ls("us-mesa-priv",PRIV);ls("us-mesa-log",LOG)}
 function clean(o){return JSON.parse(JSON.stringify(o))}
@@ -656,6 +658,7 @@ function initFirebase(){
   }catch(e){bootLocal();return}
   capsReady=true;
   try{fauth.setPersistence(firebase.auth.Auth.Persistence.SESSION)}catch(e){}
+  try{fdb.ref(".info/serverTimeOffset").on("value",s=>{const v=Number(s.val());SKEW=isFinite(v)?v:0})}catch(e){}
   fdb.ref(".info/connected").on("value",s=>{connected=!!s.val();if(connected)updateOnline();setConn()});
   fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};try{applyPlayerMoves()}catch(e){}setConn();renderOnline();if(!role)renderView()});
   fdb.ref("publico").on("value",s=>{const x=s.val();pubSeen=true;setTimeout(()=>{try{ensureSons()}catch(e){}},0);if(x&&x.json&&x.by!==clientId){const old=role==="jogador"&&myPc?myScene():null;try{PUB=mergePub(JSON.parse(x.json))}catch(e){}
@@ -1695,7 +1698,7 @@ function fxMasterHTML(){return`<div class="card"><h3>Efeitos de horror</h3>
   <div class="small" style="margin-top:6px">Vai para quem estiver marcado em “Quem”, no pedido de teste. O texto aparece no Rádio, no Apagão e no 03:17.</div></div>`}
 function onFx(x){
   if(!x||!x.id||x.id===lastFxId)return;lastFxId=x.id;ls("us-lastfx",x.id);
-  if(Date.now()-(x.at||0)>20000)return;
+  if(now()-(x.at||0)>60000)return;
   if(role!=="jogador"||!myPc)return;
   if(!(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc))))return;
   playFx(x.tipo,x.texto);
@@ -1715,7 +1718,7 @@ function playFx(tipo,texto){
 }
 function sendFx(tipo){
   const texto=($("#fxTxt")&&$("#fxTxt").value.trim())||"";
-  const x={id:"f"+Date.now().toString(36),tipo,alvos:pd.alvos,texto,at:Date.now()};
+  const x={id:"f"+Date.now().toString(36),tipo,alvos:pd.alvos,texto,at:now()};
   if(LOCAL()){toast("Modo local: mostrando aqui mesmo.");playFx(tipo,texto);return}
   fdb.ref("publico/fx").set(clean(x)).then(()=>toast(`Efeito “${FX.find(f=>f[0]===tipo)[1]}” enviado.`)).catch(e=>toast("Não enviou: "+(e&&e.code||"erro")));
   diary(`Efeito de horror: ${FX.find(f=>f[0]===tipo)[1]}${texto?` — “${texto}”`:""} (${pd.alvos==="todos"?"todos":pd.alvos.map(a=>PCMAP[a].nome).join(", ")})`,"efeito");
@@ -1885,15 +1888,15 @@ function applyAmbient(){
 }
 function onSom(x){
   if(!x||!x.id||x.id===lastSomId)return;lastSomId=x.id;ls("us-lastsom",x.id);
-  if(Date.now()-(x.at||0)>20000)return;if(role==="mestre"&&unlocked)return;if(role!=="jogador"||!myPc)return;
+  if(now()-(x.at||0)>60000)return;if(role==="mestre"&&unlocked)return;if(role!=="jogador"||!myPc)return;
   if(x.acao==="stop"){stopSom(x.tipo||"all");return}
   if(!(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc))))return;playSom(x.tipo);
 }
 function onAmbiente(x){AMB=normAmb(x);applyAmbient();refreshSndBox()}
 function onSonsArq(v){SARQ=v||{};applyAmbient();refreshSndBox();if(AC)Object.keys(SARQ).forEach(id=>getSndBuf(id).catch(()=>{}))}
-function sendStop(id){stopSom(id);if(LOCAL()||!fdb)return;fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,acao:"stop",alvos:"todos",at:Date.now()})).catch(()=>{})}
+function sendStop(id){stopSom(id);if(LOCAL()||!fdb)return;fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,acao:"stop",alvos:"todos",at:now()})).catch(()=>{})}
 function sendSom(id){playSom(id);if(LOCAL()||!fdb)return;
-  fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:pd.alvos,at:Date.now()})).catch(e=>toast("Som não enviado: "+(e&&e.code||"erro")))}
+  fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:pd.alvos,at:now()})).catch(e=>toast("Som não enviado: "+(e&&e.code||"erro")))}
 function setAmbiente(patch){AMB=normAmb(Object.assign({},AMB,patch));applyAmbient();if(!LOCAL()&&fdb)fdb.ref("publico/ambiente").set(clean(AMB)).catch(()=>{});refreshSndBox()}
 function refreshSndBox(){const el=$("#ambBox");if(el&&!(document.activeElement&&el.contains(document.activeElement)&&document.activeElement.tagName==="INPUT"))el.innerHTML=ambMasterInner()}
 let SND_OPEN=(()=>{try{return JSON.parse(localStorage.getItem("us-sndopen")||"{}")}catch(e){return{}}})();
@@ -2055,8 +2058,8 @@ const STORY_TOKENS=[
 function seedStoryTokens(){if(PRIV.mig&&PRIV.mig.tok1)return;const M=mapState();
   STORY_TOKENS.forEach(d=>{if(M.tokens[d.k])return;M.tokens[d.k]={s:d.s,x:d.x,y:d.y,t:d.t,ref:d.ref||null,nome:d.nome,ek:d.ek||null,cena:d.cena,fx:d.fx||null,som:d.som||null,vis:false}});
   PRIV.mig=Object.assign({},PRIV.mig,{tok1:true});syncMapPub();savePub();savePriv()}
-function fxTodos(tipo){if(LOCAL()||!fdb)return;fdb.ref("publico/fx").set(clean({id:"f"+Date.now().toString(36),tipo,alvos:"todos",texto:"",at:Date.now()})).catch(()=>{})}
-function somTodos(id){try{playSom(id)}catch(e){}if(LOCAL()||!fdb)return;fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:"todos",at:Date.now()})).catch(()=>{})}
+function fxTodos(tipo){if(LOCAL()||!fdb)return;fdb.ref("publico/fx").set(clean({id:"f"+Date.now().toString(36),tipo,alvos:"todos",texto:"",at:now()})).catch(()=>{})}
+function somTodos(id){try{playSom(id)}catch(e){}if(LOCAL()||!fdb)return;fdb.ref("publico/som").set(clean({id:"s"+Date.now().toString(36),tipo:id,alvos:"todos",at:now()})).catch(()=>{})}
 /* what happens when the master reveals a token: enemies join the combat list, horror effects fire */
 function onReveal(keys){const M=mapState();let fx=null,som=null,novos=[];
   keys.forEach(k=>{const v=M.tokens[k];if(!v||v.t==="pc")return;
