@@ -1397,7 +1397,7 @@ function migrateNames(){
   Object.values(MPISTAS||{}).forEach(x=>{x.titulo=fix(x.titulo);x.texto=fix(x.texto)});
   PRIV.mig=Object.assign({},PRIV.mig,{breno:true});return true;
 }
-function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}try{ensureSaber();seedSegredos();seedItens();seedItens2()}catch(e){}renderAll()}
+function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}try{ensureSaber();seedSegredos();seedItens();seedItens2();seedItens3()}catch(e){}renderAll()}
 $("#pinOk").onclick=pinSubmit;$("#pinCancel").onclick=()=>$("#pinModal").classList.remove("on");
 ["#pinIn","#pinIn2"].forEach(s=>$(s).addEventListener("keydown",e=>{if(e.key==="Enter")pinSubmit()}));
 $("#trayHd").onclick=()=>{const t=$("#tray");t.classList.toggle("min");$("#trayTog").textContent=t.classList.contains("min")?"abrir":"recolher"};
@@ -1681,7 +1681,7 @@ function saveDiario(pc){DIARIOS[pc]=diarioOf(pc);DPEND[pc]=DIARIOS[pc];clearTime
   if(LOCAL()){ls("us-diarios",DIARIOS);return}if(!fdb)return;fdb.ref("diarios/"+pc).set({json:JSON.stringify(d),at:now(),by:clientId}).catch(e=>toast("Não salvou o diário: "+(e&&e.code||"erro")+". Confira as regras do Firebase."))},500)}
 function onDiarios(v){const out={};Object.entries(v||{}).forEach(([k,x])=>{try{if(x&&x.json)out[k]=JSON.parse(x.json)}catch(e){}});
   const mine=role==="jogador"&&myPc;const keep=mine&&editing()?DIARIOS[myPc]:null;DIARIOS=out;if(keep)DIARIOS[myPc]=keep;Object.keys(DPEND).forEach(k=>{DIARIOS[k]=DPEND[k]});
-  seedSegredos();seedItens();seedItens2();const tab=role==="jogador"?ss("us-ptab"):PRIV.tab;if(tab==="diario"||(role==="jogador"&&(!tab||tab==="jogar"))||(role==="mestre"&&PCMAP[PRIV.tab]))rerender()}
+  seedSegredos();seedItens();seedItens2();seedItens3();const tab=role==="jogador"?ss("us-ptab"):PRIV.tab;if(tab==="diario"||(role==="jogador"&&(!tab||tab==="jogar"))||(role==="mestre"&&PCMAP[PRIV.tab]))rerender()}
 let diariosSeen=false;
 function seedSegredos(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(PRIV.mig&&PRIV.mig.diar)return;
   PCS.forEach(p=>{const d=diarioOf(p.id);const s=(PRIV.pcs[p.id]||{}).seg||"";if(!d.segredo&&s){d.segredo=s;DIARIOS[p.id]=d;saveDiario(p.id)}});
@@ -1703,6 +1703,14 @@ function seedItens2(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(!(
     if(c.nota&&!d.notas.includes(c.nota))d.notas=(d.notas?d.notas.trim()+"\n":"")+c.nota;
     DIARIOS[pc]=d;saveDiario(pc)});
   PRIV.mig=Object.assign({},PRIV.mig,{itens2:true});savePriv()}
+/* kit médico e pé de cabra depois da sessão 1 (applied once) */
+function seedItens3(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(!(PRIV.mig&&PRIV.mig.itens2))return;if(PRIV.mig.itens3)return;
+  const eq=(id,f)=>{const c=PUB.pcs[id];if(c){c.equip=f(c.equip||"")}};
+  eq("andre",t=>t.replace(/^Kit médico$/m,"Kit médico (gasto)"));
+  eq("helder",t=>{t=t.replace(/^Kit médico$/m,"Kit médico (2 usos)");return /pé de cabra/i.test(t)?t:t.trim()+"\nPé de cabra (1D6)"});
+  eq("rafael",t=>t.replace(/^Pé de cabra \(1D6\)\n?/m,""));
+  const d=diarioOf("helder");const i=d.mochila.findIndex(x=>/^pé de cabra$/i.test(String(x.t)));if(i>=0){d.mochila.splice(i,1);DIARIOS.helder=d;saveDiario("helder")}
+  savePub();PRIV.mig=Object.assign({},PRIV.mig,{itens3:true});savePriv()}
 function mochilaHTML(pc,d){return`<div class="moch">${d.mochila.map((it,i)=>`<div class="mi ${it.ok?"off":""}"><button class="b" data-act="miToggle" data-pc="${pc}" data-i="${i}" title="${it.ok?"voltar para a mochila":"usado / perdido"}">${it.ok?"↺":"✓"}</button><input type="text" data-mi="${i}" data-pc="${pc}" value="${esc(it.t)}"><button class="clr" data-act="miDel" data-pc="${pc}" data-i="${i}">remover</button></div>`).join("")||`<div class="small">Mochila vazia.</div>`}
   <div class="row" style="margin-top:8px"><input type="text" id="miNovo-${pc}" placeholder="Novo item — ex.: isqueiro, 2 latas de feijão, crachá do São Vicente" style="flex:1;padding:6px 8px"><button class="b" data-act="miAdd" data-pc="${pc}">+ Adicionar</button></div></div>`}
 function diarioPessoalHTML(pc,master){const d=diarioOf(pc);
