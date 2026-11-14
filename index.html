@@ -1127,7 +1127,7 @@ function renderNPCs(){
 }
 const RULES=`<div class="rules">
 <div class="toc">
-<a href="#r-teste">Testes</a><a href="#r-rodada">Rodada e iniciativa</a><a href="#r-ataque">Ataque e Defesa</a><a href="#r-reacoes">Esquiva e proteção</a><a href="#r-dano">Dano e morte</a><a href="#r-cura">Cura</a><a href="#r-municao">Munição e Ruído</a><a href="#r-infec">Infecção</a><a href="#r-medo">Medo</a><a href="#r-sanidade">Sanidade</a><a href="#r-inimigos">Inimigos</a><a href="#r-evo">Evolução</a><a href="#r-mestre">Mestre</a>
+<a href="#r-teste">Testes</a><a href="#r-rodada">Rodada e iniciativa</a><a href="#r-ataque">Ataque e Defesa</a><a href="#r-reacoes">Esquiva e proteção</a><a href="#r-dano">Dano e morte</a><a href="#r-cura">Cura</a><a href="#r-municao">Munição e Ruído</a><a href="#r-infec">Infecção</a><a href="#r-sobrev">Sobrevivência</a><a href="#r-medo">Medo</a><a href="#r-sanidade">Sanidade</a><a href="#r-inimigos">Inimigos</a><a href="#r-evo">Evolução</a><a href="#r-mestre">Mestre</a>
 </div>
 
 <section id="r-teste">
@@ -1214,6 +1214,8 @@ const RULES=`<div class="rules">
 <h2>6. Cura <span class="new">NOVO</span></h2>
 <ul>
 <li><b>Kit médico (3 usos):</b> ação + teste de Intelecto DIF 11. Sucesso cura 1D6, sucesso excepcional cura 1D6 + 3. Cada personagem pode ser tratado só 1 vez por cena.</li>
+<li><b>Remédio:</b> cura 2 PV, mas só funciona em quem está com <b>mais de 10 PV</b>. Abaixo disso, só o kit médico resolve.</li>
+<li><b>Incentivo:</b> um aliado pode gastar a ação encorajando outro; se passar num teste de <b>Vontade</b>, o encorajado ganha <b>+3</b> no próximo teste.</li>
 <li><b>Descanso curto</b> (1 hora em lugar seguro, com água e comida): +1D4 PV.</li>
 <li><b>Noite de sono segura:</b> +1D6 + Vontade em PV, e o Medo zera.</li>
 <li>Kits podem ser reabastecidos com suprimentos de farmácia ou hospital (o mestre define quantos usos).</li>
@@ -1240,6 +1242,7 @@ const RULES=`<div class="rules">
 
 <section id="r-infec">
 <h2>8. Infecção <span class="new">NOVO</span></h2>
+<p><b>Mordida:</b> o infectado só morde quando tira <b>20 natural</b> no ataque; nos outros acertos é arranhão ou pancada.</p>
 <p><b>Exposição:</b> quando um infectado causa dano com mordida ou arranhão (depois do colete), o personagem testa <b>Força DIF 11</b> (DIF 14 contra Estalador ou Eco). Se falhar, a Infecção sobe para 1.</p>
 <table><thead><tr><th>Nível</th><th>Estado</th><th>Efeito</th></tr></thead><tbody>
 <tr><td>0</td><td>Limpo</td><td>—</td></tr>
@@ -1256,6 +1259,15 @@ const RULES=`<div class="rules">
 </ul>
 </section>
 
+<section id="r-sobrev">
+<h2>8b. Sobrevivência <span class="new">NOVO</span></h2>
+<ul>
+<li><b>Comida e água:</b> cada pessoa consome <b>1 comida e 1 água por dia</b>. Quem passa um dia sem comer ou beber fica com <b>−1 em todos os testes</b> no dia seguinte, até se alimentar. <b>3 dias sem</b> comida ou água: morte.</li>
+<li><b>Carga:</b> cada um carrega <b>2 comidas + 2 águas + 1 espaço livre</b> (ex.: um galão de combustível). Remédios, baterias e coisas pequenas vão no bolso. Personagens fortes podem carregar mais, a critério do mestre.</li>
+<li><b>Rádio:</b> cada dia que o rádio fica ligado gasta <b>1 bateria</b>.</li>
+<li><b>Combustível:</b> <b>1 combustível a cada 15 km</b>. Rotas até o São Vicente: de cima e do meio 18 km, amarela 22 km, mista 20 km.</li>
+</ul>
+</section>
 <section id="r-medo">
 <h2>9. Medo <span class="new">FECHADO</span></h2>
 <p>Teste de <b>Vontade</b>: DIF 11 para algo assustador, <b>DIF 14 para horror cósmico</b> (algo que não deveria existir, um infectado que fala), DIF 17 para o impossível. Se falhar, +1 Medo. Falha crítica dá +2.</p>
@@ -1385,7 +1397,7 @@ function migrateNames(){
   Object.values(MPISTAS||{}).forEach(x=>{x.titulo=fix(x.titulo);x.texto=fix(x.texto)});
   PRIV.mig=Object.assign({},PRIV.mig,{breno:true});return true;
 }
-function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}try{ensureSaber();seedSegredos();seedItens()}catch(e){}renderAll()}
+function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}try{ensureSaber();seedSegredos();seedItens();seedItens2()}catch(e){}renderAll()}
 $("#pinOk").onclick=pinSubmit;$("#pinCancel").onclick=()=>$("#pinModal").classList.remove("on");
 ["#pinIn","#pinIn2"].forEach(s=>$(s).addEventListener("keydown",e=>{if(e.key==="Enter")pinSubmit()}));
 $("#trayHd").onclick=()=>{const t=$("#tray");t.classList.toggle("min");$("#trayTog").textContent=t.classList.contains("min")?"abrir":"recolher"};
@@ -1669,7 +1681,7 @@ function saveDiario(pc){DIARIOS[pc]=diarioOf(pc);DPEND[pc]=DIARIOS[pc];clearTime
   if(LOCAL()){ls("us-diarios",DIARIOS);return}if(!fdb)return;fdb.ref("diarios/"+pc).set({json:JSON.stringify(d),at:now(),by:clientId}).catch(e=>toast("Não salvou o diário: "+(e&&e.code||"erro")+". Confira as regras do Firebase."))},500)}
 function onDiarios(v){const out={};Object.entries(v||{}).forEach(([k,x])=>{try{if(x&&x.json)out[k]=JSON.parse(x.json)}catch(e){}});
   const mine=role==="jogador"&&myPc;const keep=mine&&editing()?DIARIOS[myPc]:null;DIARIOS=out;if(keep)DIARIOS[myPc]=keep;Object.keys(DPEND).forEach(k=>{DIARIOS[k]=DPEND[k]});
-  seedSegredos();seedItens();const tab=role==="jogador"?ss("us-ptab"):PRIV.tab;if(tab==="diario"||(role==="jogador"&&(!tab||tab==="jogar"))||(role==="mestre"&&PCMAP[PRIV.tab]))rerender()}
+  seedSegredos();seedItens();seedItens2();const tab=role==="jogador"?ss("us-ptab"):PRIV.tab;if(tab==="diario"||(role==="jogador"&&(!tab||tab==="jogar"))||(role==="mestre"&&PCMAP[PRIV.tab]))rerender()}
 let diariosSeen=false;
 function seedSegredos(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(PRIV.mig&&PRIV.mig.diar)return;
   PCS.forEach(p=>{const d=diarioOf(p.id);const s=(PRIV.pcs[p.id]||{}).seg||"";if(!d.segredo&&s){d.segredo=s;DIARIOS[p.id]=d;saveDiario(p.id)}});
@@ -1680,6 +1692,17 @@ function seedItens(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(PRI
   Object.entries(ITENS_S1).forEach(([pc,its])=>{const d=diarioOf(pc);its.forEach(x=>{if(!d.mochila.some(i=>String(i.t).toLowerCase()===x.toLowerCase()))d.mochila.push({t:x})});DIARIOS[pc]=d;saveDiario(pc)});
   const c=PUB.pcs.andre;if(c&&!/machete/i.test(c.equip||"")){c.equip=(c.equip?c.equip.trim()+"\n":"")+"Faca machete (1D6)";savePub()}
   PRIV.mig=Object.assign({},PRIV.mig,{itens1:true});savePriv()}
+/* what changed in the backpacks during session 1 (applied once) */
+const ITENS_S1B={andre:{add:["Crachá enlameado — Hospital São Vicente"]},breno:{usado:["Combustível"]},rafael:{usado:["Combustível"]},helder:{troca:{"1 vazio":"Galão vazio + mangueira"},add:["Pé de cabra"],nota:"Conheço o São Vicente: sei onde ficam a entrada principal e a entrada de serviço."}};
+function seedItens2(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(!(PRIV.mig&&PRIV.mig.itens1))return;if(PRIV.mig.itens2)return;
+  const has=(d,x)=>d.mochila.findIndex(i=>String(i.t).toLowerCase()===x.toLowerCase());
+  Object.entries(ITENS_S1B).forEach(([pc,c])=>{const d=diarioOf(pc);
+    Object.entries(c.troca||{}).forEach(([o,n])=>{const i=has(d,o);if(i>=0)d.mochila[i].t=n;else if(has(d,n)<0)d.mochila.push({t:n})});
+    (c.add||[]).forEach(x=>{if(has(d,x)<0)d.mochila.push({t:x})});
+    (c.usado||[]).forEach(x=>{const i=has(d,x);if(i>=0)d.mochila[i].ok=true});
+    if(c.nota&&!d.notas.includes(c.nota))d.notas=(d.notas?d.notas.trim()+"\n":"")+c.nota;
+    DIARIOS[pc]=d;saveDiario(pc)});
+  PRIV.mig=Object.assign({},PRIV.mig,{itens2:true});savePriv()}
 function mochilaHTML(pc,d){return`<div class="moch">${d.mochila.map((it,i)=>`<div class="mi ${it.ok?"off":""}"><button class="b" data-act="miToggle" data-pc="${pc}" data-i="${i}" title="${it.ok?"voltar para a mochila":"usado / perdido"}">${it.ok?"↺":"✓"}</button><input type="text" data-mi="${i}" data-pc="${pc}" value="${esc(it.t)}"><button class="clr" data-act="miDel" data-pc="${pc}" data-i="${i}">remover</button></div>`).join("")||`<div class="small">Mochila vazia.</div>`}
   <div class="row" style="margin-top:8px"><input type="text" id="miNovo-${pc}" placeholder="Novo item — ex.: isqueiro, 2 latas de feijão, crachá do São Vicente" style="flex:1;padding:6px 8px"><button class="b" data-act="miAdd" data-pc="${pc}">+ Adicionar</button></div></div>`}
 function diarioPessoalHTML(pc,master){const d=diarioOf(pc);
