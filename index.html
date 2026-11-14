@@ -389,6 +389,10 @@ body.glitch #view,body.glitch header{animation:glt .12s steps(2) infinite;filter
 .mkrow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}.mkrow .lnk{flex:1;text-align:left;background:none;border:0;color:#fff;padding:0;font-weight:600}
 .mkrow .b{padding:3px 9px}
 .sndl{display:flex;flex-direction:column;gap:6px}
+.moch{display:flex;flex-direction:column;gap:6px}.mi{display:flex;gap:6px;align-items:center}.mi input{flex:1;padding:5px 8px}.mi.off input{text-decoration:line-through;opacity:.5}.mi .b{padding:3px 9px}.mi .clr{background:none;border:0;color:var(--dim);font-size:11px}
+.dsec{background:rgba(120,90,200,.08);border:1px solid rgba(138,108,255,.35);border-radius:8px;padding:8px 10px;white-space:pre-wrap}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}.bst{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px}
+.bst img,.bst .bph{width:64px;height:84px;object-fit:cover;border-radius:6px;flex:none}.bst .bph{display:flex;align-items:center;justify-content:center;background:#1a1d22;color:var(--mut);font-family:"Bebas Neue";font-size:28px}.bst.off{opacity:.55}
 .sndg{display:flex;flex-direction:column;gap:6px}.sndgrp{border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02)}
 .sndgrp>summary{cursor:pointer;padding:8px 10px;list-style:none;display:flex;gap:8px;align-items:center}.sndgrp>summary::-webkit-details-marker{display:none}
 .sndgrp>summary::before{content:"▸";color:var(--mut);transition:transform .15s}.sndgrp[open]>summary::before{transform:rotate(90deg)}
@@ -661,7 +665,7 @@ function initFirebase(){
   try{fdb.ref(".info/serverTimeOffset").on("value",s=>{const v=Number(s.val());SKEW=isFinite(v)?v:0})}catch(e){}
   fdb.ref(".info/connected").on("value",s=>{connected=!!s.val();if(connected)updateOnline();setConn()});
   fdb.ref("online").on("value",s=>{ONLINE=s.val()||{};try{applyPlayerMoves()}catch(e){}setConn();renderOnline();if(!role)renderView()});
-  fdb.ref("publico").on("value",s=>{const x=s.val();pubSeen=true;setTimeout(()=>{try{ensureSons()}catch(e){}},0);if(x&&x.json&&x.by!==clientId){const old=role==="jogador"&&myPc?myScene():null;try{PUB=mergePub(JSON.parse(x.json))}catch(e){}
+  fdb.ref("publico").on("value",s=>{const x=s.val();pubSeen=true;setTimeout(()=>{try{ensureSons();ensureSaber()}catch(e){}},0);if(x&&x.json&&x.by!==clientId){const old=role==="jogador"&&myPc?myScene():null;try{PUB=mergePub(JSON.parse(x.json))}catch(e){}
     if(old&&myScene()!==old){const S=SCMAP[myScene()];if(S){toast(`${PCMAP[myPc].nome} foi para: ${S.grupo==="Hospital"?"Hospital · ":""}${S.nome}`);mapScene=null}}rerender();try{applyAmbient()}catch(e){}}});
   const q=fdb.ref("rolagens").orderByChild("at").limitToLast(150);
   q.on("child_added",s=>{const r=sanitize(s.val()||{});r._k=s.key;if(!LOG.some(x=>x.id===r.id)){LOG.unshift(r);LOG.sort((a,b)=>b.at-a.at);seenNew.add(r.id);notifyRoll(r)}ingestOne(r);renderFeeds()});
@@ -670,6 +674,7 @@ function initFirebase(){
   fdb.ref("publico/som").on("value",s=>onSom(s.val()));
   fdb.ref("publico/ambiente").on("value",s=>onAmbiente(s.val()));
   fdb.ref("publico/sonsArq").on("value",s=>onSonsArq(s.val()));
+  fdb.ref("diarios").on("value",s=>{diariosSeen=true;onDiarios(s.val())},e=>{console.warn("diarios",e)});
   q.on("child_removed",s=>{const v=s.val()||{};LOG=LOG.filter(x=>x._k!==s.key&&x.id!==v.id);myRolls=myRolls.filter(x=>x.id!==v.id);renderFeeds()});
   fauth.onAuthStateChanged(u=>{
     const isM=!!(u&&u.email&&MASTER_EMAIL&&u.email.toLowerCase()===MASTER_EMAIL.toLowerCase());
@@ -688,7 +693,7 @@ let booted=false;
 function bootLocal(){
   if(booted)return;booted=true;capsReady=true;fdb=null;
   const a=ls("us-mesa-pub"),b=ls("us-mesa-priv"),c=ls("us-mesa-log");
-  if(a)PUB=mergePub(a);if(b)PRIV=mergePriv(b);if(Array.isArray(c))LOG=c;PISTAS=ls("us-pistas")||{};MPISTAS=ls("us-mpistas")||{};
+  if(a)PUB=mergePub(a);if(b)PRIV=mergePriv(b);if(Array.isArray(c))LOG=c;PISTAS=ls("us-pistas")||{};MPISTAS=ls("us-mpistas")||{};DIARIOS=ls("us-diarios")||{};diariosSeen=true;
   setConn();renderAll();
 }
 
@@ -917,7 +922,7 @@ function renderTabs(){
   if(!(role==="mestre"&&unlocked)){
     if(role==="jogador"){t.classList.remove("hidden");const tab=ss("us-ptab")||"jogar";
       const np=pistaList(PISTAS,true).length;
-      t.innerHTML=`<button class="${tab==="jogar"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="jogar">Jogar</button><button class="${tab==="mapa"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="mapa">Mapa</button><button class="${tab==="pistas"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="pistas">Pistas${np?` <span class="cnt">${np}</span>`:""}</button><button class="${tab==="regras"?"on":""}" data-ptab="regras">Regras</button>`}
+      t.innerHTML=`<button class="${tab==="jogar"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="jogar">Jogar</button><button class="${tab==="mapa"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="mapa">Mapa</button><button class="${tab==="pistas"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="pistas">Pistas${np?` <span class="cnt">${np}</span>`:""}</button><button class="${tab==="diario"?"on":""}" style="--c:${PCMAP[myPc].cor}" data-ptab="diario">Diário</button><button class="${tab==="regras"?"on":""}" data-ptab="regras">Regras</button>`}
     else t.classList.add("hidden");
     return}
   t.classList.remove("hidden");
@@ -945,6 +950,7 @@ function renderPlayer(){
   if(tab==="regras")return RULES_PLAYER;
   if(tab==="pistas")return renderPistasPlayer();
   if(tab==="mapa")return renderMapPlayer();
+  if(tab==="diario")return renderDiarioPlayer();
   const pct=clamp(c.hp/c.hpMax*100,0,100);
   const chips=[];
   chips.push(`<span class="chip">Defesa ${10+Number(c.agil)}</span>`);chips.push(`<span class="chip">Iniciativa +${c.ini}</span>`);
@@ -1099,6 +1105,7 @@ function renderPC(p){
       <div class="fld"><label>Segredo — só o mestre vê</label><textarea data-txt="seg" data-id="${p.id}" rows="2">${esc(cv.seg)}</textarea></div>
       <div class="fld"><label>Traumas</label><textarea data-txt="traumas" data-id="${p.id}" rows="2">${esc(cv.traumas)}</textarea></div>
       <div class="fld"><label>Anotações do mestre — só o mestre vê</label><textarea data-txt="notas" data-id="${p.id}" rows="4">${esc(cv.notas)}</textarea></div></div>
+    ${diarioPessoalHTML(p.id,true)}
   </div></div>`;
 }
 function renderNPCs(){
@@ -1377,7 +1384,7 @@ function migrateNames(){
   Object.values(MPISTAS||{}).forEach(x=>{x.titulo=fix(x.titulo);x.texto=fix(x.texto)});
   PRIV.mig=Object.assign({},PRIV.mig,{breno:true});return true;
 }
-function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}renderAll()}
+function unlock(){unlocked=true;role="mestre";try{if(migrateNames()){syncMapPub&&syncMapPub();savePub();savePriv()}}catch(e){}try{seedStoryTokens()}catch(e){}try{const b4=JSON.stringify(PUB.mapa);mapState();syncMapPub();if(JSON.stringify(PUB.mapa)!==b4){savePub();savePriv()}}catch(e){}$("#pinModal").classList.remove("on");updateOnline();ingest();try{ensureSons()}catch(e){}try{ensureSaber();seedSegredos()}catch(e){}renderAll()}
 $("#pinOk").onclick=pinSubmit;$("#pinCancel").onclick=()=>$("#pinModal").classList.remove("on");
 ["#pinIn","#pinIn2"].forEach(s=>$(s).addEventListener("keydown",e=>{if(e.key==="Enter")pinSubmit()}));
 $("#trayHd").onclick=()=>{const t=$("#tray");t.classList.toggle("min");$("#trayTog").textContent=t.classList.contains("min")?"abrir":"recolher"};
@@ -1644,6 +1651,66 @@ function fearEffect(r){
   diary(`${n} falhou no teste de Medo: +${add} (Medo ${c.medo})${c.medo>=4?" — RUPTURA":""}`,"medo");if(c.medo>=4)toast(`${n} chegou à Ruptura!`);return true;
 }
 
+/* ---------- player diaries + group knowledge ---------- */
+const BEST={
+  comum:{nome:"Infectado comum",desc:"Lentos e desajeitados, quase sempre em grupo. São atraídos por barulho e luz. Uma mordida ou arranhão pode infectar.",img:"en_comum"},
+  corredor:{nome:"Corredor",desc:"Rápidos e agressivos. Disparam na direção da presa assim que a veem; fugir em linha reta raramente funciona.",img:"en_corredor"},
+  estalador:{nome:"Estalador",desc:"Faz estalos secos com a garganta e parece se guiar pelo som. Em silêncio, às vezes passa direto.",img:null},
+  eco:{nome:"Eco",desc:"Observa antes de atacar. Repete frases que ouviu, com a voz de quem falou.",img:"eco"},
+  saqueador:{nome:"Saqueadores",desc:"Gente viva, armada e com fome. Negociam quando estão em vantagem.",img:null},
+  militar:{nome:"Militares",desc:"Equipe treinada, com colete e armas de verdade. Estão procurando alguma coisa.",img:null}};
+let DIARIOS={};
+function saber(){if(!PUB.saber||typeof PUB.saber!=="object")PUB.saber={};if(!PUB.saber.ini||typeof PUB.saber.ini!=="object")PUB.saber.ini={};if(!PUB.saber.npc||typeof PUB.saber.npc!=="object")PUB.saber.npc={};return PUB.saber}
+function ensureSaber(){if(!(role==="mestre"&&unlocked)||!pubSeen)return;const S=saber();if(S.v)return;["comum","corredor","estalador"].forEach(k=>S.ini[k]=true);S.v=1;savePub()}
+function diarioOf(pc){const d=DIARIOS[pc]||{};return{segredo:d.segredo||"",objetivos:d.objetivos||"",notas:d.notas||"",mochila:Array.isArray(d.mochila)?d.mochila:[]}}
+const diarioTimers={};
+function saveDiario(pc){DIARIOS[pc]=diarioOf(pc);clearTimeout(diarioTimers[pc]);diarioTimers[pc]=setTimeout(()=>{const d=DIARIOS[pc];
+  if(LOCAL()){ls("us-diarios",DIARIOS);return}if(!fdb)return;fdb.ref("diarios/"+pc).set({json:JSON.stringify(d),at:now(),by:clientId}).catch(e=>toast("Não salvou o diário: "+(e&&e.code||"erro")+". Confira as regras do Firebase."))},500)}
+function onDiarios(v){const out={};Object.entries(v||{}).forEach(([k,x])=>{try{if(x&&x.json)out[k]=JSON.parse(x.json)}catch(e){}});
+  const mine=role==="jogador"&&myPc;const keep=mine&&editing()?DIARIOS[myPc]:null;DIARIOS=out;if(keep)DIARIOS[myPc]=keep;
+  seedSegredos();const tab=role==="jogador"?ss("us-ptab"):PRIV.tab;if(tab==="diario"||(role==="mestre"&&PCMAP[PRIV.tab]))rerender()}
+let diariosSeen=false;
+function seedSegredos(){if(!(role==="mestre"&&unlocked)||!diariosSeen)return;if(PRIV.mig&&PRIV.mig.diar)return;
+  PCS.forEach(p=>{const d=diarioOf(p.id);const s=(PRIV.pcs[p.id]||{}).seg||"";if(!d.segredo&&s){d.segredo=s;DIARIOS[p.id]=d;saveDiario(p.id)}});
+  PRIV.mig=Object.assign({},PRIV.mig,{diar:true});savePriv()}
+function mochilaHTML(pc,d){return`<div class="moch">${d.mochila.map((it,i)=>`<div class="mi ${it.ok?"off":""}"><button class="b" data-act="miToggle" data-pc="${pc}" data-i="${i}" title="${it.ok?"voltar para a mochila":"usado / perdido"}">${it.ok?"↺":"✓"}</button><input type="text" data-mi="${i}" data-pc="${pc}" value="${esc(it.t)}"><button class="clr" data-act="miDel" data-pc="${pc}" data-i="${i}">remover</button></div>`).join("")||`<div class="small">Mochila vazia.</div>`}
+  <div class="row" style="margin-top:8px"><input type="text" id="miNovo-${pc}" placeholder="Novo item — ex.: isqueiro, 2 latas de feijão, crachá do São Vicente" style="flex:1;padding:6px 8px"><button class="b" data-act="miAdd" data-pc="${pc}">+ Adicionar</button></div></div>`}
+function diarioPessoalHTML(pc,master){const d=diarioOf(pc);
+  return`<div class="card"><h3>${master?"Diário do jogador":"Meu personagem"}</h3>
+    <div class="fld" style="margin-top:0"><label>Segredo${master?" — o jogador vê aqui":""}</label>${master?`<textarea data-dia="segredo" data-pc="${pc}" rows="2">${esc(d.segredo)}</textarea>`:`<div class="px dsec">${esc(d.segredo)||"<span class='small'>O mestre ainda não escreveu.</span>"}</div>`}</div>
+    <div class="fld"><label>Objetivos</label><textarea data-dia="objetivos" data-pc="${pc}" rows="3" placeholder="O que o personagem quer agora">${esc(d.objetivos)}</textarea></div>
+    <div class="fld"><label>Mochila</label>${mochilaHTML(pc,d)}</div>
+    <div class="fld"><label>Anotações</label><textarea data-dia="notas" data-pc="${pc}" rows="6" placeholder="Nomes, lugares, desconfianças, o que prometeram a alguém…">${esc(d.notas)}</textarea></div></div>`}
+function saberHTML(master){const S=saber();
+  const ens=Object.entries(BEST).filter(([k])=>master||S.ini[k]);
+  const best=ens.map(([k,b])=>{const on=!!S.ini[k];const im=b.img&&IMG[b.img];
+    return`<div class="bst ${master&&!on?"off":""}">${im?`<img src="${im}" alt="">`:`<div class="bph">?</div>`}<div><b>${esc(b.nome)}</b><div class="small">${esc(b.desc)}</div>
+      ${master?`<button class="b ${on?"":"pri"}" data-act="sbIni" data-k="${k}" style="margin-top:6px">${on?"Esconder":"Liberar"}</button>`:""}</div></div>`}).join("")||`<div class="small">Nenhum ainda.</div>`;
+  const npcs=(PRIV&&master?PRIV.npcs:[]).map(n=>{const on=S.npc[n.id]!=null;
+    return`<div class="bst ${on?"":"off"}">${IMG[n.id]?`<img src="${IMG[n.id]}" alt="">`:`<div class="bph">${esc(n.nome.slice(0,1))}</div>`}<div style="flex:1"><b>${esc(n.nome)}</b>
+      ${on?`<input type="text" data-sbnpc="${n.id}" value="${esc(S.npc[n.id]||"")}" placeholder="o que o grupo sabe sobre ${esc(n.nome)}" style="width:100%;padding:5px 7px;margin-top:4px">`:""}
+      <button class="b ${on?"":"pri"}" data-act="sbNpc" data-k="${n.id}" style="margin-top:6px">${on?"Esconder":"Liberar"}</button></div></div>`}).join("");
+  const npcsP=Object.entries(S.npc).map(([id,nota])=>{const n={nome:(S.nomes&&S.nomes[id])||id};
+    return`<div class="bst">${IMG[id]?`<img src="${IMG[id]}" alt="">`:`<div class="bph">${esc(String(n.nome).slice(0,1))}</div>`}<div><b>${esc(n.nome)}</b><div class="small">${esc(nota||"")}</div></div></div>`}).join("")||`<div class="small">Ninguém ainda.</div>`;
+  return`<div class="card"><h3>Bestiário do grupo</h3><div class="bgrid">${best}</div>${master?`<div class="small" style="margin-top:6px">Só os liberados aparecem para os jogadores, sem números de ficha.</div>`:""}</div>
+    <div class="card"><h3>Pessoas que o grupo conhece</h3><div class="bgrid">${master?npcs:npcsP}</div>${master?`<div class="small" style="margin-top:6px">Ao liberar, escreva só o que os personagens sabem. As suas notas de mestre continuam escondidas.</div>`:""}</div>`}
+function renderDiarioPlayer(){return`<div class="wrap-narrow stack">${diarioPessoalHTML(myPc,false)}${saberHTML(false)}</div>`}
+document.addEventListener("input",e=>{const t=e.target;if(!t.dataset)return;const pc=t.dataset.pc;
+  const may=pc&&((role==="mestre"&&unlocked)||(role==="jogador"&&pc===myPc));
+  if(t.dataset.dia&&may){const d=diarioOf(pc);if(t.dataset.dia==="segredo"&&role!=="mestre")return;d[t.dataset.dia]=t.value.slice(0,6000);DIARIOS[pc]=d;saveDiario(pc);return}
+  if(t.dataset.mi!=null&&may){const d=diarioOf(pc);const it=d.mochila[Number(t.dataset.mi)];if(it){it.t=t.value.slice(0,120);DIARIOS[pc]=d;saveDiario(pc)}return}
+  if(t.dataset.sbnpc&&role==="mestre"&&unlocked){const S=saber();S.npc[t.dataset.sbnpc]=t.value.slice(0,300);S.nomes=S.nomes||{};const n=PRIV.npcs.find(x=>x.id===t.dataset.sbnpc);if(n)S.nomes[n.id]=n.nome;savePub()}});
+document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(!t)return;const a=t.dataset.act;if(!/^(mi|sb)/.test(a))return;e.stopImmediatePropagation();
+  const pc=t.dataset.pc;const may=(role==="mestre"&&unlocked)||(role==="jogador"&&pc===myPc);
+  if(a==="miAdd"&&may){const inp=$("#miNovo-"+pc);const v=(inp&&inp.value||"").trim();if(!v)return;const d=diarioOf(pc);d.mochila.push({t:v.slice(0,120)});DIARIOS[pc]=d;saveDiario(pc);renderView();setTimeout(()=>{const x=$("#miNovo-"+pc);if(x)x.focus()},30);return}
+  if(a==="miDel"&&may){if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="confirmar?";setTimeout(()=>{t.dataset.arm="";t.textContent="remover"},2500);return}const d=diarioOf(pc);d.mochila.splice(Number(t.dataset.i),1);DIARIOS[pc]=d;saveDiario(pc);renderView();return}
+  if(a==="miToggle"&&may){const d=diarioOf(pc);const it=d.mochila[Number(t.dataset.i)];if(it){it.ok=!it.ok;DIARIOS[pc]=d;saveDiario(pc);renderView()}return}
+  if(!(role==="mestre"&&unlocked))return;const S=saber();
+  if(a==="sbIni"){const k=t.dataset.k;if(S.ini[k])delete S.ini[k];else{S.ini[k]=true;diary(`Bestiário: ${BEST[k].nome}`,"pista")}savePub();renderView();return}
+  if(a==="sbNpc"){const k=t.dataset.k;S.nomes=S.nomes||{};const n=PRIV.npcs.find(x=>x.id===k);if(S.npc[k]!=null){delete S.npc[k]}else{S.npc[k]="";if(n){S.nomes[k]=n.nome;diary(`O grupo conhece: ${n.nome}`,"pista")}}savePub();renderView();return}
+},true);
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id&&e.target.id.startsWith("miNovo-")){const b=document.querySelector(`[data-act=miAdd][data-pc="${e.target.id.slice(7)}"]`);if(b)b.click()}});
+
 /* ---------- QoL: clues (pistas) ---------- */
 let PISTAS={}, MPISTAS={}, seenPistas=new Set(ls("us-seen-pistas")||[]);
 function pistaForMe(x){return x&&(x.alvos==="todos"||(Array.isArray(x.alvos)&&x.alvos.includes(myPc)))}
@@ -1671,7 +1738,8 @@ function renderPistasMaster(){
     <div class="fld"><label>Imagem (opcional)</label><input type="file" id="pnI" accept="image/*"><img id="pnPrev" class="hidden" style="max-width:220px;margin-top:8px;border-radius:8px;border:1px solid var(--line)"></div>
     <div class="btnrow" style="margin-top:12px"><button class="b pri" data-act="pistaSave">Salvar como rascunho</button><span class="small">Os jogadores só veem depois que você revelar.</span></div>
     <div class="btnrow" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><label class="b upl">Importar pacote de pistas (.json)<input type="file" accept=".json,application/json" data-pistaimp hidden></label><span class="small">entram todas como rascunho, ocultas dos jogadores</span></div></div>
-    ${ms.length?ms.map(x=>pistaCard(x,true)).join(""):`<div class="card small">Nenhuma pista criada ainda.</div>`}</div>`;
+    ${ms.length?ms.map(x=>pistaCard(x,true)).join(""):`<div class="card small">Nenhuma pista criada ainda.</div>`}
+    ${saberHTML(true)}</div>`;
 }
 function renderPistasPlayer(){const ps=pistaList(PISTAS,true);return`<div class="wrap-narrow stack">${ps.length?ps.map(x=>pistaCard(x,false)).join(""):`<div class="card small">Nenhuma pista ainda. Quando o mestre revelar documentos, fotos ou registros, eles aparecem aqui.</div>`}</div>`}
 function compressImage(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const max=1000;let w=im.width,h=im.height;if(w>max||h>max){const s=max/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}
